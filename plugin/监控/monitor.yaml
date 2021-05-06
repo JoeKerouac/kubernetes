@@ -1,0 +1,776 @@
+###################################################################################################################
+##
+## 监控安装，会安装grafana、Prometheus等
+##
+## 需要全局替换以下参数：
+## ${storageClassName}: PVC使用的存储类；
+## ${grafanaStorage}: grafana的存储大小，例如50Gi；
+## ${grafanaAdminUserName}: grafana管理员账号；
+## ${grafanaAdminUserPassword}: grafana管理员密码；
+## ${grafanaEnableAnonymous}: grafana是否允许匿名用户访问，true表示允许，false表示不允许；
+## ${grafanaHost}: grafana的域名，例如：grafana.kube.com；
+## ${prometheusRetentionTime}: Prometheus数据保留时间，例如15d（保存15天）；
+## ${prometheusStorage}: prometheus的存储大小，例如50Gi；
+## ${prometheusHost}: Prometheus的域名，例如：prometheus.kube.com；
+## 
+## 
+###################################################################################################################
+
+
+---
+###################################################################################################################
+##
+## grafana安装
+##
+###################################################################################################################
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: kube-system
+  name: kubernetes-grafana-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ${storageClassName}
+  resources:
+    requests:
+      storage: ${grafanaStorage}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: kube-system
+  annotations:
+    joe.kerouac/workload: grafana
+    joe.kerouac/service: ClusterIP
+  labels:
+    joe.kerouac/name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      joe.kerouac/name: grafana
+  template:
+    metadata:
+      labels:
+        joe.kerouac/name: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:7.5.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-storage
+          subPath: grafana
+        env:
+        - name: INFLUXDB_HOST
+          value: monitoring-influxdb
+        - name: GF_SERVER_HTTP_PORT
+          value: "3000"
+        - name: GF_AUTH_PROXY_ENABLED
+          value: "true"
+        # 配置允许匿名访问
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "${grafanaEnableAnonymous}"
+        # 匿名访问角色
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: Viewer
+        - name: GF_SERVER_ROOT_URL
+          value: "/"
+        # 允许压缩
+        - name: GF_SERVER_ENABLE_GZIP
+          value: "true"
+        - name: GF_SECURITY_ADMIN_USER
+          value: ${grafanaAdminUserName}
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "${grafanaAdminUserPassword}"
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: kubernetes-grafana-pvc
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        value: ""
+        effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: kube-system
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/tcp-probe: 'true'
+    prometheus.io/tcp-probe-port: '80'
+spec:
+  type: ClusterIP
+  selector:
+    joe.kerouac/name: grafana
+  ports:
+    - name: grafana
+      port: 80
+      targetPort: 3000
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: kube-system
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`${grafanaHost}`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: grafana
+      port: 80
+    # 中间件
+    middlewares:
+    - name: autodetect
+
+---
+
+
+###################################################################################################################
+##
+## node监控安装
+##
+###################################################################################################################
+---
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prometheus-node-exporter
+  namespace: kube-system
+  labels:
+    joe.kerouac/name: prometheus-node-exporter
+spec:
+  selector:
+    matchLabels:
+      joe.kerouac/name:  prometheus-node-exporter
+  template:
+    metadata:
+      name: prometheus-node-exporter
+      labels:
+        joe.kerouac/name: prometheus-node-exporter
+    spec:
+      containers:
+      - image: prom/node-exporter:v1.1.2
+        imagePullPolicy: IfNotPresent
+        name: prometheus-node-exporter
+        ports:
+        - name: prom-node-exp
+          containerPort: 9100
+          hostPort: 9100
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/app-metrics: 'true'
+    prometheus.io/app-metrics-path: '/metrics'
+  name: prometheus-node-exporter
+  namespace: kube-system
+  labels:
+    joe.kerouac/name: prometheus-node-exporter
+spec:
+  clusterIP: None
+  ports:
+    - name: prometheus-node-exporter
+      port: 9100
+      protocol: TCP
+  selector:
+    joe.kerouac/name: prometheus-node-exporter
+  type: ClusterIP
+
+
+
+---
+###################################################################################################################
+##
+## Prometheus安装
+##
+###################################################################################################################
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - nodes/proxy
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs: ["get", "list", "watch"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: kube-system
+
+---
+# Prometheus配置
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: kube-system
+data:
+  prometheus.yml: |-
+    global:
+      scrape_interval:     10s
+      evaluation_interval: 10s
+    scrape_configs:
+    # K8S apiserver监控
+    - job_name: 'kubernetes-component-apiservers'
+      kubernetes_sd_configs:
+      - role: endpoints
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+    - job_name: 'kubernetes-node-cadvisor'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        # 地址替换为kubernetes api service 集群内部域名.
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+    - job_name: 'kubernetes-node-kubelet'
+      kubernetes_sd_configs:
+      - role: node
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+    - job_name: 'kubernetes-node-exporters'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_namespace, __meta_kubernetes_service_name]
+        regex: true;kube-system;prometheus-node-exporter
+        action: keep
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_name
+    - job_name: 'kubernetes-service-endpoints'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        action: replace
+        target_label: __scheme__
+        regex: (https?)
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_name
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_namespace, __meta_kubernetes_endpoint_port_name]
+        # 匹配过滤drop掉系统组件服务的监控收集（另外的job会收集这些数据)
+        regex: true;kube-system;kubernetes-components-metrics
+        action: drop
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_namespace, __meta_kubernetes_service_name]
+        # 匹配过滤drop掉node-exporter监控指标数据收集（另外的job会收集这些数据）
+        regex: true;kube-system;prometheus-node-exporter
+        action: drop
+    - job_name: 'applications-service-metrics'
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_service_annotation_prometheus_io_app_metrics]
+        regex: true;true
+        action: keep
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_app_metrics_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_service_annotation_prometheus_io_app_metrics_port]
+        action: replace
+        target_label: __address__
+        regex: (.+);(.+)
+        replacement: $1:$2
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_app_info_(.+)
+    - job_name: 'applications-service-http-probe'
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: service
+      metrics_path: /probe
+      params:
+        module: [http_2xx]
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_service_annotation_prometheus_io_http_probe]
+        regex: true;true
+        action: keep
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace, __meta_kubernetes_service_annotation_prometheus_io_http_probe_port, __meta_kubernetes_service_annotation_prometheus_io_http_probe_path]
+        action: replace
+        target_label: __param_target
+        regex: (.+);(.+);(.+);(.+)
+        replacement: $1.$2:$3$4
+      #- source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_http_probe_path]
+      #  action: replace
+      #  target_label: __param_target
+      #  regex: (.+);(.+)
+      #  replacement: $1$2
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+      - source_labels: [__param_target]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_app_info_(.+)
+      #- source_labels: [__meta_kubernetes_namespace]
+      #  target_label: kubernetes_namespace
+      #- source_labels: [__meta_kubernetes_service_name]
+      #  target_label: kubernetes_name
+    - job_name: 'applications-service-tcp-probe'
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: service
+      metrics_path: /probe
+      params:
+        module: [tcp_connect]
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape, __meta_kubernetes_service_annotation_prometheus_io_tcp_probe]
+        regex: true;true
+        action: keep
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace, __meta_kubernetes_service_annotation_prometheus_io_tcp_probe_port]
+        action: replace
+        target_label: __param_target
+        regex: (.+);(.+);(.+)
+        replacement: $1.$2:$3
+      #- source_labels: [__address__]
+      #  target_label: __param_target
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+      - source_labels: [__param_target]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_app_info_(.+)
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: kube-system
+  name: kubernetes-prometheus-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ${storageClassName}
+  resources:
+    requests:
+      storage: ${prometheusStorage}
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: kube-system
+  annotations:
+    joe.kerouac/workload: prometheus
+    joe.kerouac/service: ClusterIP
+  labels:
+    joe.kerouac/name: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      joe.kerouac/name: prometheus
+  template:
+    metadata:
+      labels:
+        joe.kerouac/name: prometheus
+    spec:
+      containers:
+      - image: prom/prometheus:v2.26.0
+        name: prometheus
+        command:
+        - "/bin/prometheus"
+        args:
+        # 注意，这个配置文件要挂载过来
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        # 数据存储位置，注意，这个目录要挂载外部存储，不然直接使用本地存储容器重启会丢失数据；
+        - "--storage.tsdb.path=/prometheus"
+        # 数据保留时间
+        - "--storage.tsdb.retention.time=${prometheusRetentionTime}"
+        - "--web.route-prefix=/"
+        # 注意，这里要替换为访问Prometheus时实际的域名
+        - "--web.external-url=http://${prometheusHost}"
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+        volumeMounts:
+        - mountPath: "/prometheus"
+          name: data
+          subPath: "prometheus"
+        - mountPath: "/etc/prometheus"
+          name: config-volume
+        resources:
+          requests:
+            cpu: 200m
+            memory: 200Mi
+          limits:
+            cpu: 1000m
+            memory: 4000Mi
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: kubernetes-prometheus-pvc
+      - name: config-volume
+        configMap:
+          name: prometheus-config
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    joe.kerouac/name: prometheus
+  name: prometheus
+  namespace: kube-system
+spec:
+  selector:
+    joe.kerouac/name: prometheus
+  ports:
+  - name: monitor
+    port: 80
+    targetPort: 9090
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: prometheus
+  namespace: kube-system
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`${prometheusHost}`) && PathPrefix(`/`)
+    kind: Rule
+    services:
+    - name: prometheus
+      port: 80
+    # 中间件
+    middlewares:
+    - name: autodetect
+
+
+---
+###################################################################################################################
+##
+## K8S服务监控，监控服务状态
+##
+###################################################################################################################
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# kubernetes versions before 1.8.0 should use rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# kubernetes versions before 1.8.0 should use rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+rules:
+- apiGroups: [""]
+  resources:
+  - configmaps
+  - secrets
+  - nodes
+  - pods
+  - services
+  - resourcequotas
+  - replicationcontrollers
+  - limitranges
+  - persistentvolumeclaims
+  - persistentvolumes
+  - namespaces
+  - endpoints
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions"]
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - ingresses
+  verbs: ["list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  - jobs
+  verbs: ["list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+- apiGroups: ["policy"]
+  resources:
+  - poddisruptionbudgets
+  verbs: ["list", "watch"]
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+  - certificatesigningrequests
+  verbs: ["list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# kubernetes versions before 1.8.0 should use rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: kube-state-metrics
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kube-state-metrics-resizer
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: kube-system
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# kubernetes versions before 1.8.0 should use rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  namespace: kube-system
+  name: kube-state-metrics-resizer
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  resourceNames: ["kube-state-metrics"]
+  verbs: ["get", "update"]
+- apiGroups: ["extensions"]
+  resources:
+  - deployments
+  resourceNames: ["kube-state-metrics"]
+  verbs: ["get", "update"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  namespace: kube-system
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: kube-system
+  labels:
+    joe.kerouac/name: kube-state-metrics
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    targetPort: http-metrics
+    protocol: TCP
+  - name: telemetry
+    port: 8081
+    targetPort: telemetry
+    protocol: TCP
+  selector:
+    joe.kerouac/name: kube-state-metrics
+
+
+---
+apiVersion: apps/v1
+# Kubernetes version 1.8.x should use apps/v1beta2
+# Kubernetes versions before 1.8.0 should use apps/v1beta1 or extensions/v1beta1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: kube-system
+  annotations:
+    joe.kerouac/workload: kube-state-metrics
+    joe.kerouac/service: ClusterIP
+  labels:
+    joe.kerouac/name: kube-state-metrics
+spec:
+  selector:
+    matchLabels:
+      joe.kerouac/name: kube-state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        joe.kerouac/name: kube-state-metrics
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+      - name: kube-state-metrics
+        image: kubesphere/kube-state-metrics:v1.9.7
+        ports:
+        - name: http-metrics
+          containerPort: 8080
+        - name: telemetry
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      - name: addon-resizer
+        image: kubesphere/addon-resizer:1.8.4
+        resources:
+          limits:
+            cpu: 150m
+            memory: 50Mi
+          requests:
+            cpu: 150m
+            memory: 50Mi
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        command:
+          - /pod_nanny
+          - --container=kube-state-metrics
+          - --cpu=100m
+          - --extra-cpu=1m
+          - --memory=100Mi
+          - --extra-memory=2Mi
+          - --threshold=5
+          - --deployment=kube-state-metrics
