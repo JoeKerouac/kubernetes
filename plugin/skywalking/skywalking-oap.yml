@@ -29,7 +29,7 @@ metadata:
 data:
   # 初始化sql
   init.sql: |
-    CREATE DATABASE IF NOT EXISTS skywalking DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
+    CREATE DATABASE IF NOT EXISTS skywalking DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
     use mysql;
     update user set host="%" where user="root";
     grant all privileges on *.* to root@'%' identified by '${MYSQL_PASSWORD}' with grant option;
@@ -39,7 +39,7 @@ data:
   # binlog相关配置：https://dev.mysql.com/doc/refman/5.7/en/replication-options-binary-log.html
   mysql.conf: |
     [mysqld]
-    
+
     # 开启根据当前负载动态调整磁盘刷新率（数据先写入缓冲池，然后刷新到磁盘）；
     innodb_adaptive_flushing=TRUE
     # redo log水位，redo log积压大于该阈值时会强制打开innodb_adaptive_flushing
@@ -47,55 +47,42 @@ data:
     # 自适应hash
     innodb_adaptive_hash_index=TRUE
     innodb_adaptive_hash_index_parts=32
-    
-    
+
+
     # 默认存储引擎，使用InnoDB作为默认存储引擎；
     default_storage_engine=InnoDB
     # TEMPORARY表的默认存储引擎；
     default_tmp_storage_engine=InnoDB
     # 设置每周从周日开始；
     default_week_format=0
-    
+
     # 锁超时时间，单位秒；该超时时间适用于使用metadata locks的所有语句；
-    lock_wait_timeout=5
+    lock_wait_timeout=300
     # 行锁超时时间
-    innodb_lock_wait_timeout=5
+    innodb_lock_wait_timeout=300
     # 是否自动生成数据目录中的SSL相关文件
     auto_generate_certs=TRUE
-    
-    
-    
+
+
+
     ############################################
     ##
     ## 编码设置
     ############################################
-    
+
     # server端默认编码
     character_set_server=utf8
     # 文件系统编码，utf8允许文件名是中文
     character_set_filesystem=utf8
     # 服务端默认排序规则
     collation_server=utf8_general_ci
-    
-    
+
+
     ############################################
     ##
     ## 查询相关配置
     ############################################
-    
-    # 每个join使用一个join_buffer，一个语句中有多个join会创建多个join_buffer
-    join_buffer_size=128K
-    # 预编译语句的最大数量，最小0，最大1048576，设置为0表示禁用预编译语句；
-    max_prepared_stmt_count=1000
-    # 执行sql时分配内存块的大小，单位byte，如果内存碎片问题严重可以适当调大该值；最小1024，最大4294967295
-    query_alloc_block_size=8192
-    # 排序缓冲区大小，session级别
-    sort_buffer_size=2M
-    # 每个事务的内存池初始大小；最小1024，最大131072；如果内存池不够用则会继续申请内存，每次申请transaction_alloc_block_size大小的内存，事务结束后释放这部分内存，保留transaction_prealloc_size；
-    transaction_prealloc_size=8K
-    # 当事务内存池不够时申请内存块的大小，每次申请该配置大小的内存，单位byte；最小1024，最大131072；
-    transaction_alloc_block_size=16K
-    
+
     # 关闭一般查询日志
     general_log=FALSE
     # 一般查询日志的文件名
@@ -124,11 +111,19 @@ data:
     innodb_purge_threads=4
     # 表名大小写敏感
     lower_case_table_names=0
-    
+
     # 查询超时时间，SELECT语句超过该时间后会被超时处理，单位毫秒；0表示永远不超时；对于存储过程中的select语句忽略该选项；
-    max_execution_time=10000
+    max_execution_time=300000
     # 如果sql语句预计需要检索的数据超过该行数，那么将会被禁止执行；
-    max_join_size=100000
+    max_join_size=1000000
+    # 每个join使用一个join_buffer，一个语句中有多个join会创建多个join_buffer
+    join_buffer_size=1M
+    # 预编译语句的最大数量，最小0，最大1048576，设置为0表示禁用预编译语句；
+    max_prepared_stmt_count=1000
+    # 执行sql时分配内存块的大小，单位byte，如果内存碎片问题严重可以适当调大该值；最小1024，最大4294967295
+    query_alloc_block_size=8192
+    # 排序缓冲区大小
+    sort_buffer_size=128M
     # 全局事务隔离级别，READ-UNCOMMITTED、READ-COMMITTED、REPEATABLE-READ、SERIALIZABLE
     # READ-UNCOMMITTED：一个事务可以读取到另外一个未提交事务修改的记录；会有脏读问题；
     # READ-COMMITTED：一个事务只能读取到另外一个事务提交后的修改记录，如果事务A先读取了数据data，然后事务B修改了data并提交，事务A此时重新读取数据data会发现数据data更改了，出现不可重复读的现象；
@@ -137,8 +132,8 @@ data:
     # mysql关于事务隔离级别的解释：https://dev.mysql.com/doc/refman/5.7/en/innodb-transaction-isolation-levels.html
     # mysql关于幻影行的解释：https://dev.mysql.com/doc/refman/5.7/en/innodb-next-key-locking.html
     transaction_isolation=REPEATABLE-READ
-    
-    
+
+
     # 用于客户端连接的线程池大小，默认值为8 + (max_connections / 100)，上限100
     thread_cache_size=10
     # 客户端连接使用的线程模型；
@@ -146,45 +141,48 @@ data:
     # no-threads：一个线程对应一个连接
     # loaded-dynamically：使用线程池插件初始化
     thread_handling=one-thread-per-connection
-    
-    
+
+    # 每个事务的内存池初始大小；最小1024，最大131072；如果内存池不够用则会继续申请内存，每次申请transaction_alloc_block_size大小的内存，事务结束后释放这部分内存，保留transaction_prealloc_size；
+    transaction_prealloc_size=8K
+    # 当事务内存池不够时申请内存块的大小，每次申请该配置大小的内存，单位byte；最小1024，最大131072；
+    transaction_alloc_block_size=16K
+
+
     ############################################
     ##
     ## 各种存储路径配置
     ############################################
-    
+
     # 数据目录
     datadir=/data/mysql/data
-    
-    
+
+
     ############################################
     ##
     ## binlog配置
     ############################################
-    
-    # 事务binlog日志缓冲区大小，每个客户端一个；
-    binlog_cache_size=1M
-    # 非事务binlog日志缓冲区大小，每个客户端一个；
-    binlog_stmt_cache_size=8K
-    
-    
-    # 开启mysql binlog功能，binlog文件名就叫binlog
+
+    #开启mysql binlog功能
     log_bin=binlog
     # binlog索引，指示当前使用的是哪个binlog文件
     log_bin_index=binlog.index
     # 服务端ID，多个实例应该设置不同，启用binlog必须设置该值
     server_id=1
+    # 事务binlog日志缓冲区大小，每个客户端一个；
+    binlog_cache_size=1M
+    # 非事务binlog日志缓冲区大小，每个客户端一个；
+    binlog_stmt_cache_size=8K
     # binlog的格式，ROW、STATEMENT、MIXED，
     binlog_format=ROW
     # binlog group多少微秒刷一次磁盘，0表示立即刷盘；
     binlog_group_commit_sync_delay=100000
     # binlog group中binlog条数大于该值时会立即刷盘
     binlog_group_commit_sync_no_delay_count=10
-    # redolog是本机MySQL实例消费的，如果丢失会导致本节点数据丢失，而binlog是供其他节点从本节点同步数据使用的，如果丢失会导致其他节点数据缺失；
+    # binlog刷盘频率控制；
     # 0表示依赖操作系统不时将binlog刷到磁盘，服务器掉电时可能导致存在没有同步到binlog的事务，即事务完成了但是binlog没有写出；
     # 1表示在事务完成前先将binlog刷到磁盘；
     # 其他：如果值大于1，每N个binlog合并提交给group后同步到磁盘，binlog_group_commit_sync_delay控制多久刷新一次；
-    sync_binlog=100
+    sync_binlog=1
     # binlog保存天数，超过该时间将会被清除，0表示不清除；
     expire_logs_days=30
     # 事务binlog缓冲区最大值
@@ -193,18 +191,12 @@ data:
     max_binlog_stmt_cache_size=4G
     # binlog文件最大存储量，超过后会新建一个文件，最小4K，最大1G，同时同一个事务的binlog肯定会在同一个文件，所以可能最终binlog文件可能会大于该限制；
     max_binlog_size=500M
-    
+
     ############################################
     ##
     ## tcp配置
     ############################################
-    
-    # 一个数据包的最大大小，默认4M
-    max_allowed_packet=32M
-    # 网络缓冲区，每个client thread都有一个，sql结果将会缓冲到这里，运行时会根据需要动态放大到max_allowed_packet，sql语句响应完毕后重新缩小到net_buffer_length，单位byte
-    net_buffer_length=4096
-    
-    
+
     # 等待连接的最大连接数量，相当于tcp的back_log选项；
     back_log=1000
     # 绑定地址，设置监听所有地址
@@ -214,12 +206,14 @@ data:
     # 连接超时设置，单位秒；默认10秒；
     connect_timeout=5
     # 网络读取超时时间，单位秒
-    net_read_timeout=3
+    net_read_timeout=300
     # 网络写出超时时间，单位秒
-    net_write_timeout=3
+    net_write_timeout=300
     # 如果网络写出或者读取被中断，在放弃前重试的次数
     net_retry_count=5
-    
+
+    # 一个数据包的最大大小，默认4M
+    max_allowed_packet=32M
     # 客户端连续N次连接请求中断时服务器阻止主机进行进一步连接；成功连接后将该计数清零；如果要解除被阻止的主机需要刷新主机缓存；
     # 主机缓存刷新文档：https://dev.mysql.com/doc/refman/5.7/en/host-cache.html#host-cache-flushing
     # 该值可以有效防止暴力破解密码；
@@ -228,19 +222,16 @@ data:
     max_connections=300
     # 同一个用户账户能并发开启的最大连接数，最小0，最大4294967295，0表示不限制；一般无需限制，因为有max_connections兜底；
     max_user_connections=0
-    
-    
-    
+    # 网络缓冲区，sql结果将会缓冲到这里，运行时会根据需要动态放大到max_allowed_packet，sql语句响应完毕后重新缩小到net_buffer_length，单位byte
+    net_buffer_length=1024
+
+
+
     ############################################
     ##
     ## redo/undo log优化
     ############################################
-    
-    # redo日志写出缓冲区大小，默认16MB，缓冲区增大能有效降低磁盘IO；
-    innodb_log_buffer_size=128M
-    # write_ahead优化相关参数，设置为page size即可（page size的整数倍也行，可以使用getconf PAGE_SIZE命令获取当前系统的page size）
-    innodb_log_write_ahead_size=8k
-    
+
     # redo log文件大小，默认48MB，文件越大，崩溃后恢复时间越长
     innodb_log_file_size=512M
     # 使用日志文件数量，设置为2（官方推荐），日志将会在两个文件中循环写入；
@@ -249,9 +240,8 @@ data:
     innodb_max_undo_log_size=2G
     # 开启undo log自动截断，超过最大大小后会截断；
     innodb_undo_log_truncate=TRUE
-    # 5秒刷一次日志，将日志从内存刷到磁盘；注意：设置越大可能丢失越多的数据，例如设置5秒，机器宕机时，最长将会丢失5秒的数据；最小值是1；innodb_flush_log_at_trx_commit设置为2才会生效；
-    innodb_flush_log_at_timeout=5
-    # redolog是本机MySQL实例消费的，如果丢失会导致本节点数据丢失，而binlog是供其他节点从本节点同步数据使用的，如果丢失会导致其他节点数据缺失；
+    # 5秒刷一次日志，将日志从内存刷到磁盘；注意：设置越大可能丢失越多的数据，例如设置5秒，机器宕机时，最长将会丢失5秒的数据；最小值是1；
+    innodb_flush_log_at_timeout=30
     # 事务提交时redo日志的写出规则；
     # 0表示会逐条将每个sql记录redo，然后每N秒（innodb_flush_log_at_timeout控制）将redo log刷到磁盘；
     # 1表示完全符合ACID承诺，只要事务提交就会将redo log刷到磁盘；
@@ -259,14 +249,16 @@ data:
     # 注意：即使设置了1，也可能丢失数据，因为操作系统可能会将写出到磁盘的数据缓存并告诉mysql已经写入磁盘，实际上此时数据还在内存缓存，如果此时机器掉电那么这部分数据将不会被刷新到磁盘，就会
     # 丢失，避免该情况可以尝试设置禁用硬件的磁盘写缓存；
     innodb_flush_log_at_trx_commit=2
-    
-    
-    
+    # redo日志写出缓冲区大小，默认16MB，缓冲区增大能有效降低磁盘IO；
+    innodb_log_buffer_size=256M
+    innodb_log_write_ahead_size=8k
+
+
     ############################################
     ##
     ## IO优化
     ############################################
-    
+
     # 页大小，大页适合表扫描和批量更新，而较小的页适合多个小事务写入，较小的页面也比较适合SSD磁盘；
     innodb_page_size=64K
     # 缓冲池划分区域数，对于缓冲池总大小大于1G的，增加缓冲池分区数可以降低多线程间由于对同一个缓冲池的访问导致的冲突，有效改进并发性；默认值是8；
@@ -295,7 +287,6 @@ data:
     innodb_io_capacity_max=500
     # 关闭
     innodb_log_compressed_pages=FALSE
-
 ---
 
 apiVersion: v1
@@ -527,15 +518,15 @@ spec:
               labelSelector:
                 matchLabels:
                   app: "skywalking-oap"
-                  release: "skywalking-oap"
-                  component: "skywalking-oap"
       containers:
       - name: skywalking-oap
+        # 注意，这个镜像是自己打的，跟官方镜像的区别就是这个镜像里边添加了MySQL的驱动
         image: nexus.niceloo.com:8083/youlu/skywalking:8.5.0-mysql
         imagePullPolicy: Always
         livenessProbe:
           tcpSocket:
             port: 12800
+          failureThreshold: 15
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
@@ -551,18 +542,19 @@ spec:
         env:
         - name: JAVA_OPTS
           value: "-Xms2g -Xmx2g"
+        # 指定当前使用K8S做集群管理（服务发现）
         - name: SW_CLUSTER
-          #value: kubernetes
-          value: standalone
+          value: kubernetes
         - name: SW_CLUSTER_K8S_NAMESPACE
-          value: "middleware"
+          value: middleware
+        - name: SW_CLUSTER_K8S_LABEL
+          value: app=skywalking-oap
+        # 使用K8S的config-map做动态配置
         - name: SW_CONFIGURATION
-          #value: k8s-configmap
-          value: none
+          value: k8s-configmap
+        # 配置刷新时间，单位秒
         - name: SW_CONFIG_CONFIGMAP_PERIOD
           value: "60"
-        - name: SW_CLUSTER_K8S_LABEL
-          value: "app=skywalking-oap"
         - name: SKYWALKING_COLLECTOR_UID
           valueFrom:
             fieldRef:
