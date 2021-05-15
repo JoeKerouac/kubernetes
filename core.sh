@@ -306,6 +306,7 @@ EOF
 createCert() {
 echo "开始生成证书"
 # 写入证书配置（注意， 其中alt_names中的IP是必须的，指向证书使用者的IP，注意，对于apiserver来说，MASTER_IP也是必须的，因为集群内部是通过apiserver的service ip访问的）
+# 注意，keyUsage中必须要包含digitalSignature，否则K8S的Java客户端会报错
 cat << EOF > ${SECURE_DIR}/common.csr.conf
 [ req ]
 default_bits = 2048
@@ -337,7 +338,7 @@ IP.2 = ${MASTER_IP}
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
-keyUsage=keyEncipherment,dataEncipherment
+keyUsage=digitalSignature,keyEncipherment,dataEncipherment
 extendedKeyUsage=serverAuth,clientAuth
 subjectAltName=@alt_names
 EOF
