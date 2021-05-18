@@ -78,7 +78,7 @@ spec:
         # 配置允许匿名访问
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "${grafanaEnableAnonymous}"
-        # 匿名访问角色
+        # 匿名访问角色、Admin或者Viewer
         - name: GF_AUTH_ANONYMOUS_ORG_ROLE
           value: Viewer
         - name: GF_SERVER_ROOT_URL
