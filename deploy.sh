@@ -47,6 +47,10 @@ SLAVE_SSH_PORT=22
 SLAVE_SSH_USER=root
 SLAVE_SSH_PASSWD=
 
+# dns的upstream，可以是文件，也可以是其他的DNS服务器
+UPSTREAMNAMESERVER=/etc/resolv.conf
+
+
 # docker的私服仓库
 DOCKER_REGISTRY_MIRRORS="\\\"https://uyah70su.mirror.aliyuncs.com\\\""
 # docker的非安全仓库（如果自建仓库不是使用SSL连接的需要配置，docker默认使用安全的SSL仓库，使用这个可以指定使用非SSL连接的仓库）
@@ -141,7 +145,7 @@ execSSHWithoutPasswd "ssh -p ${1} ${2}@${3} \"${5}\"" ${4}
 ##
 ###################################################################################################################
 
-sh compiler.sh ${CA_CERT_PASSWORD}
+sh compiler.sh ${CA_CERT_PASSWORD} ${UPSTREAMNAMESERVER}
 
 
 ###################################################################################################################

@@ -102,32 +102,32 @@ spec:
   sessionAffinity: None
   type: ClusterIP
 
-#---
-## 创建一个中间件，将自动添加ContentType的功能关闭（注意，该中间件如果要使用请手动添加到IngressRoute定义中）
-#apiVersion: traefik.containo.us/v1alpha1
-#kind: Middleware
-#metadata:
-#  name: autodetect
-#  namespace: kuboard
-#spec:
-#  contentType:
-#    autoDetect: false
-#
-#---
-#apiVersion: traefik.containo.us/v1alpha1
-#kind: IngressRoute
-#metadata:
-#  name: kuboard-v3
-#  namespace: kuboard
-#spec:
-#  entryPoints:
-#    - web
-#  routes:
-#  - match: Host(`${kuboardHost}`)
-#    kind: Rule
-#    services:
-#    - name: kuboard-v3
-#      port: 80
-#    # 中间件
-#    middlewares:
-#    - name: autodetect
+---
+# 创建一个中间件，将自动添加ContentType的功能关闭（注意，该中间件如果要使用请手动添加到IngressRoute定义中）
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: autodetect
+  namespace: kuboard
+spec:
+  contentType:
+    autoDetect: false
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kuboard-v3
+  namespace: kuboard
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`${kuboardHost}`)
+    kind: Rule
+    services:
+    - name: kuboard-v3
+      port: 80
+    # 中间件
+    middlewares:
+    - name: autodetect

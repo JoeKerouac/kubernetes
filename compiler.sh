@@ -11,6 +11,8 @@ set -e
 
 
 CA_CERT_PASSWORD=$1
+UPSTREAMNAMESERVER=$2
+
 
 # 如果指定目录不存在则创建
 mkdirIfAbsent() {
@@ -195,6 +197,8 @@ mkdirIfAbsent ${KUBECTL_INSTALLER_DIR}/secure
 mkdirIfAbsent ${KUBECTL_INSTALLER_DIR}/config
 mkdirIfAbsent ${KUBECTL_INSTALLER_DIR}/bin
 
+# 插件安装
+PLUGIN_INSTALLER_DIR=${INSTALLER_DIR}/plugin
 
 # 安全文件生成目录
 K8S_SECURE_TEMP_DIR=${TARGET_DIR}/secure
@@ -938,3 +942,115 @@ cp ${KUBECONFIG} ~/.kube/config
 echo "kubectl安装完成"
 OUTER
 
+
+###################################################################################################################
+##
+## 插件安装文件生成，注意，请在K8S集群安装完毕后再安装插件
+##
+###################################################################################################################
+
+# 创建目录
+mkdirIfAbsent ${PLUGIN_INSTALLER_DIR}
+
+cp ${NOW_DIR}/template/core-dns.yml ${PLUGIN_INSTALLER_DIR}
+cp ${NOW_DIR}/template/ingress-traefik.yml ${PLUGIN_INSTALLER_DIR}
+cp ${NOW_DIR}/template/metrics-server.yml ${PLUGIN_INSTALLER_DIR}
+cp ${NOW_DIR}/template/kuboard.yml ${PLUGIN_INSTALLER_DIR}
+
+
+cat << 'EOF' > install-plugins.sh
+set -o nounset
+set -e
+
+
+# 如果指定目录不存在则创建
+mkdirIfAbsent() {
+	if [ ! -d $1 ]; then
+	echo "目录[$1]不存在，创建..."
+	mkdir -p $1
+	fi
+}
+
+
+PRG="$0"
+# -h表示判断文件是否是软链接
+# 下面这个用于获取真实路径
+while [ -h "$PRG" ]; do
+  ls=`ls -ld "$PRG"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+  else
+    PRG=`dirname "$PRG"`/"$link"
+  fi
+done
+
+# 这里获取到的就是当前的目录（如果是sh执行就是相对路径，如果是exec就是绝对路径）
+NOW_DIR=`dirname "$PRG"`
+
+
+# etcd地址，例如192.168.1.6:2379
+ETCD_SERVER=$1
+# kuboard的域名，例如kuboard.kube.com（用于配置ingress规则）
+KUBOARD_HOST=$2
+
+EOF
+
+
+cat << EOF >> install-plugins.sh
+
+###################################################################################################################
+##
+## core-dns 安装
+##
+###################################################################################################################
+
+
+# K8S的service ip的范围，例如194.10.0.0/16
+sed -i "s/\${VIP_CIDR}/${VIP_RANGE}/g" ${NOW_DIR}/core-dns.yml
+# pod的ip范围，例如193.0.0.0/8
+sed -i "s/\${POD_CIDR}/${CLUSTER_CIDR}/g" ${NOW_DIR}/core-dns.yml
+# K8S集群的域名后缀，注意，这个域名只会使用K8S解析，不会转发到其他地方；
+sed -i "s/\${CLUSTER_DOMAIN}/${CLUSTER_DOMAIN}/g" ${NOW_DIR}/core-dns.yml
+# 响应给dns查询客户端的ttl
+sed -i "s/\${DNS_TTL}/30/g" ${NOW_DIR}/core-dns.yml
+# Prometheus的端口号
+sed -i "s/\${PROMETHEUS_PORT}/9153/g" ${NOW_DIR}/core-dns.yml
+# 域名服务器（也可以是文件，例如/etc/resolv.conf），对于coredns无法解析的域名转发到该服务器解析；
+sed -i "s/\${UPSTREAMNAMESERVER}/${UPSTREAMNAMESERVER}/g" ${NOW_DIR}/core-dns.yml
+# dns在集群中的service ip
+sed -i "s/\${CLUSTER_DNS_IP}/${CLUSTER_DNS_IP}/g" ${NOW_DIR}/core-dns.yml
+
+kubectl apply -f ${NOW_DIR}/core-dns.yml
+
+
+
+###################################################################################################################
+##
+## ingress-traefik 安装
+##
+###################################################################################################################
+
+kubectl apply -f ${NOW_DIR}/ingress-traefik.yml
+
+###################################################################################################################
+##
+## metrics-server 安装
+##
+###################################################################################################################
+
+kubectl apply -f ${NOW_DIR}/metrics-server.yml
+
+###################################################################################################################
+##
+## kuboard 安装，依赖 traefik-server
+##
+###################################################################################################################
+
+
+sed -i "s/\${etcdAddr}/${ETCD_SERVER}/g" ${NOW_DIR}/kuboard.yml
+sed -i "s/\${kuboardHost}/${KUBOARD_HOST}/g" ${NOW_DIR}/kuboard.yml
+
+kubectl apply -f ${NOW_DIR}/kuboard.yml
+
+EOF
