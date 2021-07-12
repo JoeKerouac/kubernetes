@@ -41,7 +41,7 @@ MASTER_SSH_PASSWD=
 K8S_INSTALLER_DIR=/data/k8s-installer
 
 
-# 为了方便，所有的kube节点都要有相同的ssh端口号、用户名、密码
+# 为了方便，所有的kube节点都要有相同的ssh端口号、用户名、密码，多个IP间使用空格分隔
 SLAVE_IPS=()
 SLAVE_SSH_PORT=22
 SLAVE_SSH_USER=root
