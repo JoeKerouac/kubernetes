@@ -2,11 +2,13 @@
 ##
 ## coredns安装文件，默认安装到kube-system命名空间中
 ## 外部需要替换一下几个参数：
-## ${CLUSTER_DOMAIN}
-## ${DNS_TTL}
-## ${PROMETHEUS_PORT}
-## ${UPSTREAMNAMESERVER}
-## ${CLUSTER_DNS_IP}
+## ${VIP_CIDR}: K8S的service ip的范围，例如194.10.0.0/16
+## ${POD_CIDR}: pod的ip范围，例如193.0.0.0/8
+## ${CLUSTER_DOMAIN}: K8S集群的域名后缀，注意，这个域名只会使用K8S解析，不会转发到其他地方；
+## ${DNS_TTL}: 响应给dns查询客户端的ttl
+## ${PROMETHEUS_PORT}: Prometheus的端口号
+## ${UPSTREAMNAMESERVER}: 域名服务器（也可以是文件，例如/etc/resolv.conf），对于coredns无法解析的域名转发到该服务器解析；
+## ${CLUSTER_DNS_IP}: dns在集群中的service ip
 ##
 ###################################################################################################################
 
@@ -56,6 +58,7 @@ subjects:
 
 # kubernetes插件文档：https://coredns.io/plugins/kubernetes/
 # hosts插件文档：https://coredns.io/plugins/hosts/
+# 下面指定的errors、health等都是插件名，注意插件有顺序
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -64,20 +67,41 @@ metadata:
 data:
   # coredns配置，
   Corefile: |
+    # K8S域名解析走这里，配置vip CIDR 和 pod的CIDR来允许对这两个ip段进行dns反解析
+    ${CLUSTER_DOMAIN} ${VIP_CIDR} ${POD_CIDR} {
+        errors
+        health {
+          lameduck 5s
+        }
+        ready
+        # 注意这里不用配置fallthrough，因为K8S集群的域名只有K8S能解析，其他解析不了
+        kubernetes ${CLUSTER_DOMAIN} ${VIP_CIDR} ${POD_CIDR} {
+          # pods有三种模式：
+          # 1、disabled：不处理pod的请求，永远返回域名不存在；
+          # 2、insecure：如果coredns中存在指定pod的A record（即域名与IP的映射关系）则返回；
+          # 3、verified：会验证请求对应的A record指向的pod是否与发起请求的pod在同一个namespace，如果在则返回，否则返回查找不到（这个没有验证，官网大概是这个意思）
+          pods insecure
+          # 响应给dns查询客户端的ttl
+          ttl ${DNS_TTL}
+        }
+        prometheus :${PROMETHEUS_PORT}
+        cache 30
+        # 允许动态更新Corefile的该部分，10秒检测一次配置文件变更
+        reload 10s
+        loadbalance
+    }
+    # 非K8S的域名走这里
     .:53 {
         errors
         health {
           lameduck 5s
         }
         ready
-        kubernetes ${CLUSTER_DOMAIN} in-addr.arpa ip6.arpa {
-          pods insecure
-          fallthrough in-addr.arpa ip6.arpa
-          ttl ${DNS_TTL}
-        }
+        # 先走自定义的host文件，配置fallthrough，如果host文件中没有定义继续往下
         hosts /etc/coredns/hosts {
           ttl ${DNS_TTL}
-          reload 10s
+          # N秒检测一次hosts文件有没有变更，这个时间已经够了，因为这个文件是通过configmap挂载过来的，configmap变更同步还需要一段时间；
+          reload 30s
           fallthrough
         }
         prometheus :${PROMETHEUS_PORT}
@@ -85,8 +109,10 @@ data:
           max_concurrent 1000
         }
         cache 30
+        # 静态检测循环查询，例如coredns将查询转发给本地127.0.0.1，然后127.0.0.1又将查询转发给了coredns，如果发现这种链路将动态将该链路删除；
         loop
-        reload
+        # 允许动态更新Corefile的该部分，10秒检测一次配置文件变更
+        reload 10s
         loadbalance
     }
   # 全局host映射配置，这里可以添加其他的一些配置

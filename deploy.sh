@@ -1,45 +1,6 @@
 set -o nounset
 set -e
 
-###################################################################################################################
-##
-## 生成服务端、客户端安装脚本，需要传一个参数：ca证书密码
-##
-## 使用说明：请修改MASTER的节点信息和SLAVE的节点信息，执行的时候传入CA证书密码，然后本脚本会自动在MASTER节点和SLAVE
-## 节点部署相关服务，同时使用设定的节点IP作为通讯IP；
-##
-###################################################################################################################
-
-# ca证书密码
-CA_CERT_PASSWORD=$1
-
-
-# 主节点的ip、ssh端口号、用户名、密码
-MASTER_IP=
-MASTER_SSH_PORT=22
-MASTER_SSH_USER=root
-MASTER_SSH_PASSWD=
-# 存放安装文件的目录
-MASTER_INSTALL_BIN_DIR=/data/installer/server
-
-
-# 为了方便，所有的kube节点都要有相同的ssh端口号、用户名、密码
-SLAVE_IPS=()
-SLAVE_SSH_PORT=22
-SLAVE_SSH_USER=root
-SLAVE_SSH_PASSWD=
-# 存放安装文件的目录
-SLAVE_INSTALL_BIN_DIR=/data/installer/client
-
-
-# 如果指定目录不存在则创建
-mkdirIfAbsent() {
-	if [ ! -d $1 ]; then
-	echo "目录[$1]不存在，创建..."
-	mkdir -p $1
-	fi
-}
-
 
 PRG="$0"
 # -h表示判断文件是否是软链接
@@ -58,16 +19,77 @@ done
 NOW_DIR=`dirname "$PRG"`
 
 
+###################################################################################################################
+##
+## 生成服务端、客户端安装脚本，需要传一个参数：ca证书密码
+##
+## 使用说明：请修改MASTER的节点信息和SLAVE的节点信息，执行的时候传入CA证书密码，然后本脚本会自动在MASTER节点和SLAVE
+## 节点部署相关服务，同时使用设定的节点IP作为通讯IP；
+##
+###################################################################################################################
 
+# ca证书密码
+CA_CERT_PASSWORD=$1
+
+
+# 主节点的ip、ssh端口号、用户名、密码
+MASTER_IP=
+MASTER_SSH_PORT=22
+MASTER_SSH_USER=root
+MASTER_SSH_PASSWD=
+# 目标机器存放安装文件的目录
+K8S_INSTALLER_DIR=/data/k8s-installer
+
+
+# 为了方便，所有的kube节点都要有相同的ssh端口号、用户名、密码
+SLAVE_IPS=()
+SLAVE_SSH_PORT=22
+SLAVE_SSH_USER=root
+SLAVE_SSH_PASSWD=
+
+# docker的私服仓库
+DOCKER_REGISTRY_MIRRORS="\\\"https://uyah70su.mirror.aliyuncs.com\\\""
+# docker的非安全仓库（如果自建仓库不是使用SSL连接的需要配置，docker默认使用安全的SSL仓库，使用这个可以指定使用非SSL连接的仓库）
+DOCKER_INSECURE_REGISTRIES="\\\"harbor.niceloo.com:88\\\",\\\"nexus.niceloo.com:8083\\\", \\\"nexus-prod.niceloo.com:8083\\\""
+
+
+
+###################################################################################################################
+##
+## 常量定义
+##
+###################################################################################################################
+
+# 注意，下面几个参数在componentInstallHeader.sh中也有使用，使用export导出方便调用compiler.sh的时候compiler.sh脚本使用
 # CA证书过期时间，默认100年
-CA_CRT_EXPIRE=36500
+export CA_CRT_EXPIRE=36500
 # 公司名
-ENTERPRISE_NAME="JoeKerouac"
+export ENTERPRISE_NAME=JoeKerouac
 # admin用户的名字
-ADMIN_USER=admin
+export ADMIN_USER=admin
 # admin用户所属的组
-ADMIN_USER_GROUP=system:masters
+export ADMIN_USER_GROUP=system:masters
+# 申请证书所属部门
+export ORGANIZATIONAL_UNIT=dev
+# 公司所属城市
+export STATE=北京
 
+
+
+# etcd监听端口号
+ETCDPORT=2379
+# K8S安装目标路径
+INSTALL_TARGET_DIR=/data/k8s
+
+
+# 编译目标目录
+COMPILE_TARGET_DIR=${NOW_DIR}/target/installer
+APISERVER_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kube-apiserver
+CM_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kube-controller-manager
+SCHEDULER_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kube-scheduler
+PROXY_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kube-proxy
+KUBELET_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kubelet
+KUBECTL_COMPILE_TARGET_DIR=${COMPILE_TARGET_DIR}/kubectl
 
 
 ###################################################################################################################
@@ -75,6 +97,16 @@ ADMIN_USER_GROUP=system:masters
 ## 通用函数定义
 ##
 ###################################################################################################################
+
+
+# 如果指定目录不存在则创建
+mkdirIfAbsent() {
+	if [ ! -d $1 ]; then
+	echo "目录[$1]不存在，创建..."
+	mkdir -p $1
+	fi
+}
+
 
 # ssh相关函数自动输入密码，使用示例：execSSHWithoutPasswd 'ssh root@192.168.56.1 "df -h"' 123456，注意，这里命令只能执行一行
 function execSSHWithoutPasswd() {
@@ -105,146 +137,11 @@ execSSHWithoutPasswd "ssh -p ${1} ${2}@${3} \"${5}\"" ${4}
 
 ###################################################################################################################
 ##
-## 生成安装文件通用部分
+## 编译，生成安装包
 ##
 ###################################################################################################################
 
-
-
-# 安装文件目标目录创建
-TARGET_DIR=${NOW_DIR}/target
-# 先清空目录
-rm -rf ${TARGET_DIR}
-mkdirIfAbsent ${TARGET_DIR}
-
-INSTALLER_DIR=${TARGET_DIR}/installer
-# 通用脚本部分
-mkdirIfAbsent ${INSTALLER_DIR}
-
-# 客户端安装文件目录
-SERVER_INSTALLER_DIR=${INSTALLER_DIR}/server
-mkdirIfAbsent ${SERVER_INSTALLER_DIR}
-
-# 服务端安装文件目录
-CLIENT_INSTALLER_DIR=${INSTALLER_DIR}/client
-mkdirIfAbsent ${CLIENT_INSTALLER_DIR}
-
-
-# 安全文件生成目录
-K8S_SECURE_TEMP_DIR=${TARGET_DIR}/secure
-# 创建这个目录
-mkdirIfAbsent ${K8S_SECURE_TEMP_DIR}
-
-
-echo "准备生成相关证书（CA证书、admin用户证书）"
-
-# 开始生成证书
-# 先生成CA的key
-#生成一个2048bit的ca.key，使用aes256加密这个密钥
-openssl genrsa -aes256 -out ${K8S_SECURE_TEMP_DIR}/ca.key -passout pass:${CA_CERT_PASSWORD} 2048 >/dev/null  2>&1
-echo "ca证书密钥生成完毕"
-# 使用CA的key生成一个自签名的CA证书，CA证书必须有一个DN，这里选择O
-openssl req -x509 -new -nodes -key ${K8S_SECURE_TEMP_DIR}/ca.key -passin pass:${CA_CERT_PASSWORD} -subj "/O=${ENTERPRISE_NAME}" -days ${CA_CRT_EXPIRE} -out ${K8S_SECURE_TEMP_DIR}/ca.crt >/dev/null  2>&1
-echo "ca证书生成完毕"
-
-
-# 生成一个2048bit的admin用户的key
-openssl genrsa -out ${K8S_SECURE_TEMP_DIR}/admin.key 2048 >/dev/null 2>&1
-# 使用上边的CSR请求文件生成admin用户证书CSR（证书请求）
-openssl req -new -key ${K8S_SECURE_TEMP_DIR}/admin.key -subj "/CN=${ADMIN_USER}/O=${ADMIN_USER_GROUP}" -out ${K8S_SECURE_TEMP_DIR}/admin.csr >/dev/null 2>&1
-# 生成admin用户的证书
-openssl x509 -req -in ${K8S_SECURE_TEMP_DIR}/admin.csr -CA ${K8S_SECURE_TEMP_DIR}/ca.crt -CAkey ${K8S_SECURE_TEMP_DIR}/ca.key -passin pass:${CA_CERT_PASSWORD} -CAcreateserial -out ${K8S_SECURE_TEMP_DIR}/admin.crt -days ${CA_CRT_EXPIRE} -extensions v3_ext >/dev/null  2>&1
-echo "使用ca证书签名的admin用户证书生成完毕"
-
-openssl genrsa -out ${K8S_SECURE_TEMP_DIR}/serviceAccount.key >/dev/null 2>&1
-
-
-
-# 移动证书文件到客户端、服务器的安装目录
-mkdirIfAbsent ${SERVER_INSTALLER_DIR}/secure
-mkdirIfAbsent ${CLIENT_INSTALLER_DIR}/secure
-for KEY in ca.crt ca.key admin.crt admin.key serviceAccount.key
-do
-	cp ${K8S_SECURE_TEMP_DIR}/${KEY} ${SERVER_INSTALLER_DIR}/secure/
-	cp ${K8S_SECURE_TEMP_DIR}/${KEY} ${CLIENT_INSTALLER_DIR}/secure/
-done
-echo "相关证书生成完毕，当前证书存放在：${K8S_SECURE_TEMP_DIR}"
-
-
-###################################################################################################################
-##
-## 服务端安装、卸载文件生成
-##
-###################################################################################################################
-echo "准备生成服务端安装文件"
-
-# 创建服务端安装bin目录，后续安装文件都放在这里
-mkdirIfAbsent ${SERVER_INSTALLER_DIR}/bin
-# 将二进制文件移动到指定目录
-for LIB in kube-apiserver kube-controller-manager kube-scheduler kubectl kube-proxy
-do
-	cp ${NOW_DIR}/release/v1.20.0/${LIB} ${SERVER_INSTALLER_DIR}/bin
-done
-
-
-# 生成安装脚本
-cat << EOF >> ${SERVER_INSTALLER_DIR}/install.sh
-TYPE=server
-INSTALL=install
-EOF
-cat core.sh >> ${SERVER_INSTALLER_DIR}/install.sh
-
-
-# 生成卸载脚本
-cat << EOF >> ${SERVER_INSTALLER_DIR}/uninstall.sh
-TYPE=server
-INSTALL=uninstall
-EOF
-cat core.sh >> ${SERVER_INSTALLER_DIR}/uninstall.sh
-
-# 将K8S服务安装模板copy到安装路径
-cp template/* ${SERVER_INSTALLER_DIR}/
-
-echo "服务器安装文件生成完毕，位置：${SERVER_INSTALLER_DIR}"
-
-
-
-###################################################################################################################
-##
-## 客户端安装、卸载文件生成
-##
-###################################################################################################################
-echo "准备生成客户端安装文件"
-
-# 创建目录，后续安装文件都放在这里
-mkdirIfAbsent ${CLIENT_INSTALLER_DIR}/bin
-
-
-# 将二进制文件移动到指定目录
-for LIB in kubectl kube-proxy kubelet
-do
-	cp ${NOW_DIR}/release/v1.20.0/${LIB} ${CLIENT_INSTALLER_DIR}/bin
-done
-
-
-# 生成安装脚本
-cat << EOF >> ${CLIENT_INSTALLER_DIR}/install.sh
-TYPE=client
-INSTALL=install
-EOF
-cat core.sh >> ${CLIENT_INSTALLER_DIR}/install.sh
-
-
-
-# 生成卸载脚本
-cat << EOF >> ${CLIENT_INSTALLER_DIR}/uninstall.sh
-TYPE=client
-INSTALL=uninstall
-EOF
-cat core.sh >> ${CLIENT_INSTALLER_DIR}/uninstall.sh
-
-
-echo "客户端安装文件生成完毕，位置：${CLIENT_INSTALLER_DIR}"
+sh compiler.sh ${CA_CERT_PASSWORD}
 
 
 ###################################################################################################################
@@ -254,25 +151,48 @@ echo "客户端安装文件生成完毕，位置：${CLIENT_INSTALLER_DIR}"
 ###################################################################################################################
 
 
+echo "nohup sh ${K8S_INSTALLER_DIR}/serverInstall.sh ${MASTER_IP} ${MASTER_IP} ${CA_CERT_PASSWORD} ${INSTALL_TARGET_DIR} ${ETCDPORT} > ${K8S_INSTALLER_DIR}/serverInstall.log 2>&1 &" > ${COMPILE_TARGET_DIR}/serverDeploy.sh
+
 echo "在机器${MASTER_IP}上安装K8S server"
 # 将target/installer/server目录递归复制到远程，注意要先创建目录
-execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${MASTER_IP} ${MASTER_SSH_PASSWD} "mkdir -p ${MASTER_INSTALL_BIN_DIR}"
-# 注意，源目录后边加了斜杠和点，表示只把目录中的内容copy过去，不copy目录本身
-execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${SERVER_INSTALLER_DIR}/. ${MASTER_SSH_USER}@${MASTER_IP}:${MASTER_INSTALL_BIN_DIR}" ${MASTER_SSH_PASSWD}
+execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${MASTER_IP} ${MASTER_SSH_PASSWD} "mkdir -p ${K8S_INSTALLER_DIR}"
+echo "将二进制文件分发到 ${MASTER_IP}"
+# 注意，源目录后边加了斜杠和点，表示只把目录中的内容copy过去，不copy目录本身，不加表示将目录也copy过去
+execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${APISERVER_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${CM_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${SCHEDULER_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${PROXY_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBECTL_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${NOW_DIR}/shell/serverInstall.sh ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${COMPILE_TARGET_DIR}/serverDeploy.sh ${MASTER_SSH_USER}@${MASTER_IP}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+echo "二进制文件分发完毕"
+
 # 远程执行安装server
-execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${MASTER_IP} ${MASTER_SSH_PASSWD} "nohup sh ${MASTER_INSTALL_BIN_DIR}/install.sh ${MASTER_IP} ${MASTER_IP} ${CA_CERT_PASSWORD} > ${MASTER_INSTALL_BIN_DIR}/install.log &"
+execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${MASTER_IP} ${MASTER_SSH_PASSWD} "sh ${K8S_INSTALLER_DIR}/serverDeploy.sh"
 echo "在机器${MASTER_IP}上安装K8S server任务已经分发完毕，请登录机器查看安装状态"
 
 
+cat << EOF > ${COMPILE_TARGET_DIR}/clientDeploy.sh
+LOCAL_IP=\$1
+nohup sh ${K8S_INSTALLER_DIR}/clientInstall.sh \${LOCAL_IP} ${MASTER_IP} ${CA_CERT_PASSWORD} ${INSTALL_TARGET_DIR} ${ETCDPORT} ${MASTER_IP} "${DOCKER_REGISTRY_MIRRORS}" "${DOCKER_INSECURE_REGISTRIES}" > ${K8S_INSTALLER_DIR}/clientInstall.log &
+EOF
 
 echo "准备安装K8S client集群"
 for ((i=0; i < ${#SLAVE_IPS[*]}; i++))
 do
     echo -e "\t将K8S client安装任务分发到机器${SLAVE_IPS[${i}]}上"
     # 执行远程安装，注意要先创建目录，后边执行的时候会用
-    execRemote ${SLAVE_SSH_PORT} ${SLAVE_SSH_USER} ${SLAVE_IPS[${i}]} ${SLAVE_SSH_PASSWD} "mkdir -p ${SLAVE_INSTALL_BIN_DIR}"  "\t"
-    execSSHWithoutPasswd "scp -r -P ${SLAVE_SSH_PORT} ${CLIENT_INSTALLER_DIR}/. ${SLAVE_SSH_USER}@${SLAVE_IPS[${i}]}:${SLAVE_INSTALL_BIN_DIR}" ${SLAVE_SSH_PASSWD}
-    execRemote ${SLAVE_SSH_PORT} ${SLAVE_SSH_USER} ${SLAVE_IPS[${i}]} ${SLAVE_SSH_PASSWD} "nohup sh ${SLAVE_INSTALL_BIN_DIR}/install.sh ${SLAVE_IPS[${i}]} ${MASTER_IP} ${CA_CERT_PASSWORD} > ${SLAVE_INSTALL_BIN_DIR}/install.log &"  "\t"
+    execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${SLAVE_IPS[${i}]} ${MASTER_SSH_PASSWD} "mkdir -p ${K8S_INSTALLER_DIR}"
+    echo "将二进制文件分发到 ${SLAVE_IPS[${i}]}"
+    # 注意，源目录后边加了斜杠和点，表示只把目录中的内容copy过去，不copy目录本身，不加表示将目录也copy过去
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBELET_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${PROXY_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBECTL_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${NOW_DIR}/shell/clientInstall.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${COMPILE_TARGET_DIR}/clientDeploy.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    echo "二进制文件分发完毕"
+
+    execRemote ${SLAVE_SSH_PORT} ${SLAVE_SSH_USER} ${SLAVE_IPS[${i}]} ${SLAVE_SSH_PASSWD} "sh ${K8S_INSTALLER_DIR}/clientDeploy.sh ${SLAVE_IPS[${i}]} "
     echo -e "\t----------------------------------------"
 done
 echo "K8S client集群安装任务下发完毕，请登录机器查看安装状态"
