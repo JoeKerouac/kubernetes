@@ -264,12 +264,17 @@ spec:
               ports:
               - name: web
                 containerPort: 80
+              - name: dns
+                containerPort: 53
+                protocol: UDP
               - name: admin
                 containerPort: 8080
               args:
               - --providers.kubernetescrd
               # 定义一个端点，名字叫web，端口号是80，定义IngressRoute的时候需要；
               - --entrypoints.web.address=:80
+              # 定义DNS的端口号，方便后续将集群内的DNS服务暴漏出去
+              - --entrypoints.dns.address=:53/udp
               # 开启API，后边ingressRoute使用
               - --api=true
               # 启用dashboard
@@ -298,9 +303,14 @@ spec:
    app: traefik-ingress-lb
  ports:
  - port: 80
-   targetPort: 80
+   targetPort: web
    name: web
    nodePort: 80
+ - port: 53
+   targetPort: dns
+   name: dns
+   nodePort: 53
+   protocol: UDP
  type: NodePort
 
 #---

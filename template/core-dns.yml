@@ -245,3 +245,18 @@ spec:
   - name: metrics
     port: ${PROMETHEUS_PORT}
     protocol: TCP
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteUDP
+metadata:
+  name: kube-dns
+  namespace: kube-system
+spec:
+  entryPoints:
+    - dns
+  routes:
+    - services:
+        - name: kube-dns
+          port: 53
+
