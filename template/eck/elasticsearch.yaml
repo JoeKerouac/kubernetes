@@ -1,0 +1,46 @@
+###########################################################
+#
+# 部署elasticsearch
+#
+# 注意，这个有个前提，就是物理机的vm.max_map_count选项必须大于等于262144，可以使用命令sysctl -w vm.max_map_count=262144临时修改下，然后
+# 在/etc/sysctl.conf这个文件中添加一行vm.max_map_count=262144的配置永久生效
+#
+# 注意将存储类调整为自己集群中实际的存储类
+###########################################################
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: eck
+  namespace: elastic-system
+spec:
+  version: 7.13.3
+  # 回收策略：DeleteOnScaledownAndClusterDeletion、DeleteOnScaledownOnly、DeleteOnScaledownAndClusterDeletion、DeleteOnScaledownOnly
+  volumeClaimDeletePolicy: DeleteOnScaledownOnly
+  nodeSets:
+    - name: default
+      count: 1
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 50Gi
+            # 注意，这个存储类要调整为我们自己的
+            storageClassName: glusterfs-storage
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: -Xms6g -Xmx6g
+              resources:
+                requests:
+                  memory: 8Gi
+                  cpu: 8
+                limits:
+                  memory: 8Gi
+
