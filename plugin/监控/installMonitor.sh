@@ -24,7 +24,7 @@ cd $NOW_DIR
 
 # 注意，下面的变量需要根据不通环境来修改
 storageClassName=glusterfs-storage
-grafanaStorage=50Gi
+grafanaStorage=10Gi
 grafanaAdminUserName=admin
 grafanaAdminUserPassword=123456
 grafanaEnableAnonymous=true
