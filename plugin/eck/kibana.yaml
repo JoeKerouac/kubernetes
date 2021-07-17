@@ -1,0 +1,31 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: eck
+  namespace: elastic-system
+spec:
+  version: 7.13.3
+  # 禁用https
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  count: 1
+  # 注意，这个name要和elastic search的metadata.name一致
+  elasticsearchRef:
+    name: eck
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          env:
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=2048"
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 0.5
+            limits:
+              memory: 2.5Gi
+              cpu: 2
+

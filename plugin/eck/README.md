@@ -7,8 +7,9 @@
 - 部署完成可以使用 `kubectl get es` （或者 `kubectl get elasticsearch`） 来查看elasticsearch的部署状态；
 - 使用 `PASSWORD=$(kubectl get secret eck-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')` 来获取es的密码；
 - 使用 `curl -u "elastic:$PASSWORD" -k "https://eck-es-http:9200"` 来请求es，注意将域名替换为ip或者自己映射的域名；
-
+- kibana安装类似;
 
 需要以下镜像，请提前准备（版本号根据自己选择更改）：
 - docker.elastic.co/eck/eck-operator:1.6.0
 - docker.elastic.co/elasticsearch/elasticsearch:7.13.3
+- docker.elastic.co/kibana/kibana:7.13.3
