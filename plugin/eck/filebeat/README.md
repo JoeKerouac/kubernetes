@@ -1,0 +1,1 @@
+filebeat容器制作，可以作为sidecar，仅需要50m-300m的cpu、100Mi-200Mi的内存即可；
