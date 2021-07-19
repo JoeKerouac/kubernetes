@@ -43,15 +43,18 @@ rm -rf ${DELOY_DIR}/*
 cp all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 cp es.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
 cp kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
+cp kibana.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
 
 
 
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/es.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/kibana.yml.${NAMESPACE}
+sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
 
 
 
 kubectl apply -f ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/es.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/kibana.yml.${NAMESPACE}
+kubectl apply -f ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
