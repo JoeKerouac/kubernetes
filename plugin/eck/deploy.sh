@@ -43,7 +43,7 @@ rm -rf ${DELOY_DIR}/*
 cp all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 cp es.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
 cp kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
-cp kibana.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
+cp filebeat.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
 
 
 
