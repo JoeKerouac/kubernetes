@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat
+  namespace: ${NAMESPACE}
+data:
+  filebeat.yml: |-
+    # ============================== Filebeat inputs ===============================
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /data/glusterfs/**/*.log
+    
+      # 添加自定义字段
+      fields:
+        env: ${ENV}
+        appName: ${APP_NAME}
+        podName: ${POD_NAME}
+    
+      # 所有行必须以[开头，如果不是[开头说明是上一行，例如异常栈
+      multiline.pattern: ^\[
+      # 默认false，表示匹配上边的是新行，如果设置为true，则表示不匹配上边的是新行
+      multiline.negate: false
+    
+      # "after" 或者 "before"，定义匹配的行应该和前边不匹配的行定义为一行还是和后边不匹配的行定义为一行，默认是after
+      multiline.match: after
+    
+    # ============================== Filebeat modules ==============================
+    filebeat.config.modules:
+      # modules配置文件，默认不用动
+      path: ${path.config}/modules.d/*.yml
+      # 是否允许配置文件重载，默认false不允许，我们这里设置为允许
+      reload.enabled: true
+      # 配置重载时间间隔
+      reload.period: 10s
+    
+    # ======================= Elasticsearch template setting =======================
+    
+    setup.template.settings:
+      # 数据分片
+      index.number_of_shards: 10
+      # 数据压缩方法
+      index.codec: best_compression
+      #_source.enabled: false
+    
+    # =================================== Kibana ===================================
+    
+    
+    setup.kibana:
+      host: "eck-kb-http.elastic-system:5601"
+      username: "elastic"
+      password: "${ES_PASSWORD}"
+    
+      # Kibana Space ID
+      # ID of the Kibana Space into which the dashboards should be loaded. By default,
+      # the Default Space will be used.
+      #space.id:
+    
+    # =============================== Elastic Cloud ================================
+    
+    # These settings simplify using Filebeat with the Elastic Cloud (https://cloud.elastic.co/).
+    
+    # The cloud.id setting overwrites the `output.elasticsearch.hosts` and
+    # `setup.kibana.host` options.
+    # You can find the `cloud.id` in the Elastic Cloud web UI.
+    #cloud.id:
+    
+    # The cloud.auth setting overwrites the `output.elasticsearch.username` and
+    # `output.elasticsearch.password` settings. The format is `<user>:<pass>`.
+    #cloud.auth:
+    
+    # ================================== Outputs ===================================
+    
+    # Configure what output to use when sending the data collected by the beat.
+    
+    # ---------------------------- Elasticsearch Output ----------------------------
+    output.elasticsearch:
+      # Array of hosts to connect to.
+      hosts: ["eck-es-http.elastic-system:9200"]
+    
+      # Protocol - either `http` (default) or `https`.
+      protocol: "http"
+    
+      # Authentication credentials - either API key or username/password.
+      #api_key: "id:api_key"
+      username: "elastic"
+      password: "${ES_PASSWORD}"
+    
+    # ------------------------------ Logstash Output -------------------------------
+    #output.logstash:
+      # The Logstash hosts
+      #hosts: ["localhost:5044"]
+    
+      # Optional SSL. By default is off.
+      # List of root certificates for HTTPS server verifications
+      #ssl.certificate_authorities: ["/etc/pki/root/ca.pem"]
+    
+      # Certificate for SSL client authentication
+      #ssl.certificate: "/etc/pki/client/cert.pem"
+    
+      # Client Certificate Key
+      #ssl.key: "/etc/pki/client/cert.key"
+
+    
+
+
