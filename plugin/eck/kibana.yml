@@ -2,7 +2,7 @@ apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
   name: eck
-  namespace: elastic-system
+  namespace: ${NAMESPACE}
 spec:
   version: 7.13.3
   # 禁用https
@@ -28,4 +28,33 @@ spec:
             limits:
               memory: 2.5Gi
               cpu: 2
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: autodetect
+  namespace: ${NAMESPACE}
+spec:
+  contentType:
+    autoDetect: false
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kibana
+  namespace: ${NAMESPACE}
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`kibana-${NAMESPACE}.kube.com`)
+      kind: Rule
+      services:
+        - name: eck-kb-http
+          port: 5601
+      # 中间件
+      middlewares:
+        - name: autodetect
 

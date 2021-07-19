@@ -11,7 +11,7 @@ apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
   name: eck
-  namespace: elastic-system
+  namespace: ${NAMESPACE}
 spec:
   version: 7.13.3
   # 禁用https
@@ -41,7 +41,7 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms6g -Xmx6g
+                  value: -Xms3g -Xmx3g
               resources:
                 requests:
                   memory: 8Gi
