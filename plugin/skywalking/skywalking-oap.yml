@@ -105,8 +105,8 @@ spec:
                   app: "skywalking-oap"
       containers:
       - name: skywalking-oap
-        # 注意，这个镜像是自己打的，跟官方镜像的区别就是这个镜像里边添加了MySQL的驱动
-        image: nexus.niceloo.com:8083/youlu/skywalking:8.5.0-mysql
+        # 注意，如果要使用MySQL作为存储，那么需要自己添加MySQL的驱动
+        image: apache/skywalking-oap-server:8.6.0-es7
         imagePullPolicy: Always
         livenessProbe:
           tcpSocket:
