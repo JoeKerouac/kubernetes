@@ -108,8 +108,8 @@ sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
 
 
 
-kubectl apply -f eck/all-in-one.yml.${NAMESPACE}
-checkPod ${NAMESPACE} elastic-operator 1
+kubectl apply -f eck/all-in-one.yml
+checkPod middleware elastic-operator 1
 kubectl apply -f ${DELOY_DIR}/es.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
