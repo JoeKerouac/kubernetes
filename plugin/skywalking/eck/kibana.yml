@@ -49,7 +49,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`kibana-${NAMESPACE}.kube.com`)
+    - match: Host(`kibana.${NAMESPACE}.${DOMAIN}`)
       kind: Rule
       services:
         - name: eck-kb-http

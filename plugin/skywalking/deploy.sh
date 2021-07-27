@@ -31,26 +31,34 @@ mkdirIfAbsent() {
 
 
 
-
+# 本次要部署的namespace
 NAMESPACE=$1
+# 域名后缀，例如kube.com、local等，注意不要以.开头
+DOMAIN=$2
+
 DELOY_DIR=${NOW_DIR}/${NAMESPACE}
 
-echo "部署eck到${NAMESPACE}"
+echo "部署skywalking、eck到 ${NAMESPACE}，使用域名后缀为：${DOMAIN}"
 
 mkdirIfAbsent ${DELOY_DIR}
 rm -rf ${DELOY_DIR}/*
 
-cp all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
-cp es.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
-cp kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
-cp filebeat.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
+cp eck/all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
+cp eck/es.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
+cp eck/kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
+cp eck/filebeat.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
+cp skywalking-oap.yml ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
 
 
 
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/es.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/kibana.yml.${NAMESPACE}
+sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
+sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
+sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
+
 
 
 
@@ -58,3 +66,4 @@ kubectl apply -f ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/es.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
+kubectl apply -f ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}

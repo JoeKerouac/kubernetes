@@ -1,10 +1,10 @@
 ###################################################################################################################
 ##
-## skywalking安装，注意替换以下变量：
-## ${SW_ES_USER}: es7用户名
-## ${SW_ES_PASSWORD}: es7密码
-## ${SW_STORAGE_ES_CLUSTER_NODES}: es7域名
-## ${SW_STORAGE_ES_HTTP_PROTOCOL}: es7使用协议（http或者https）
+## 全局替换变量
+## ${NAMESPACE}: 要部署到哪个namespace中
+## ${DOMAIN}：域名后缀，注意不要以.开头
+##
+## 使用ES时无需替换变量（默认模板时ES的）
 ##
 ## 如果使用MySQL，请替换以下变量
 ## ${MYSQL_PASSWORD}: mysql root用户密码；
@@ -19,27 +19,19 @@
 
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: middleware
----
-
-
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
     app: skywalking-oap
   name: skywalking-oap-svc-account
-  namespace: middleware
+  namespace: ${NAMESPACE}
 
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: skywalking-oap-role
-  namespace: middleware
+  namespace: ${NAMESPACE}
   labels:
     app: skywalking-oap
 rules:
@@ -52,7 +44,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: skywalking-oap-role-binding
-  namespace: middleware
+  namespace: ${NAMESPACE}
   labels:
     app: skywalking-oap
 roleRef:
@@ -62,7 +54,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: skywalking-oap-svc-account
-    namespace: middleware
+    namespace: ${NAMESPACE}
 
 
 ---
@@ -71,7 +63,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: skywalking-oap-configmap
-  namespace: middleware
+  namespace: ${NAMESPACE}
   labels:
     app: skywalking-oap
 data:
@@ -83,7 +75,7 @@ metadata:
   labels:
     app: skywalking-oap
   name: skywalking-oap
-  namespace: middleware
+  namespace: ${NAMESPACE}
 spec:
   replicas: 2
   selector:
@@ -107,7 +99,7 @@ spec:
       - name: skywalking-oap
         # 注意，如果要使用MySQL作为存储，那么需要自己添加MySQL的驱动
         image: apache/skywalking-oap-server:8.6.0-es7
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           tcpSocket:
             port: 12800
@@ -136,7 +128,7 @@ spec:
         - name: SW_CLUSTER
           value: kubernetes
         - name: SW_CLUSTER_K8S_NAMESPACE
-          value: middleware
+          value: ${NAMESPACE}
         - name: SW_CLUSTER_K8S_LABEL
           value: app=skywalking-oap
         # 使用K8S的config-map做动态配置
@@ -155,13 +147,16 @@ spec:
         - name: SW_STORAGE
           value: elasticsearch7
         - name: SW_ES_USER
-          value: ${SW_ES_USER}
+          value: elastic
         - name: SW_ES_PASSWORD
-          value: ${SW_ES_PASSWORD}
+          valueFrom:
+            secretKeyRef:
+              key: elastic
+              name: eck-es-elastic-user
         - name: SW_STORAGE_ES_CLUSTER_NODES
-          value: ${SW_STORAGE_ES_CLUSTER_NODES}
+          value: eck-es-http:9200
         - name: SW_STORAGE_ES_HTTP_PROTOCOL
-          value: ${SW_STORAGE_ES_HTTP_PROTOCOL}
+          value: http
         # 使用MySQL时使用以下
         #- name: SW_STORAGE
         #  value: mysql
@@ -186,7 +181,7 @@ spec:
         # 资源限制，注意，1Gi=1024Mi=1024*1024Ki = 1024*1024*1024Bi=1024*1024*1024byte，1G=1000M=1000*1000K=1000*1000*1000byte
         resources:
           limits:
-            cpu: 6000m
+            cpu: 3000m
             memory: 3Gi
           requests:
             cpu: 1000m
@@ -221,7 +216,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: skywalking-oap
-  namespace: middleware
+  namespace: ${NAMESPACE}
   labels:
     app: skywalking-oap
 spec:
@@ -243,7 +238,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: skywalking-ui
-  namespace: middleware
+  namespace: ${NAMESPACE}
   labels:
     app: skywalking-ui
 spec:
@@ -282,7 +277,7 @@ metadata:
   labels:
     app: skywalking-ui
   name: skywalking-ui
-  namespace: middleware
+  namespace: ${NAMESPACE}
 spec:
   type: ClusterIP
   ports:
@@ -299,7 +294,7 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
 metadata:
   name: autodetect
-  namespace: middleware
+  namespace: ${NAMESPACE}
 spec:
   contentType:
     autoDetect: false
@@ -309,12 +304,12 @@ apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
   name: skywalking-ui
-  namespace: middleware
+  namespace: ${NAMESPACE}
 spec:
   entryPoints:
     - web
   routes:
-  - match: Host(`skywalking-ui.kube.com`)
+  - match: Host(`skywalking-ui.${NAMESPACE}.${DOMAIN}`)
     kind: Rule
     services:
     - name: skywalking-ui
