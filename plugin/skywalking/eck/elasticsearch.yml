@@ -23,7 +23,7 @@ spec:
   volumeClaimDeletePolicy: DeleteOnScaledownOnly
   nodeSets:
     - name: default
-      count: 1
+      count: 2
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -32,7 +32,7 @@ spec:
               - ReadWriteOnce
             resources:
               requests:
-                storage: 50Gi
+                storage: 200Gi
             # 注意，这个存储类要调整为我们自己的
             storageClassName: glusterfs-storage
       podTemplate:

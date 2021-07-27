@@ -92,7 +92,7 @@ mkdirIfAbsent ${DELOY_DIR}
 rm -rf ${DELOY_DIR}/*
 
 cp eck/all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
-cp eck/es.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
+cp eck/elasticsearch.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
 cp eck/kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 cp eck/filebeat.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
 cp skywalking-oap.yml ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
