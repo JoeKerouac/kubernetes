@@ -1,23 +1,24 @@
 ##################################################################
 #
 # Elastic Cloud on Kubernetes（ECK）用于扩展K8S基础功能，简化我们在集群中
-# 部署ELK应用
+# 部署ELK应用，默认部署到middleware这个命名空间，注意，elastic-operator在
+# 整个集群范围内只能部署一个
 #
 ##################################################################
 # Source: eck-operator/templates/operator-namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ${NAMESPACE}
+  name: middleware
   labels:
-    name: ${NAMESPACE}
+    name: middleware
 ---
 # Source: eck-operator/templates/service-account.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: elastic-operator
-  namespace: ${NAMESPACE}
+  namespace: middleware
   labels:
     control-plane: elastic-operator
     app.kubernetes.io/version: "1.6.0"
@@ -27,7 +28,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: elastic-webhook-server-cert
-  namespace: ${NAMESPACE}
+  namespace: middleware
   labels:
     control-plane: elastic-operator
     app.kubernetes.io/version: "1.6.0"
@@ -37,7 +38,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: elastic-operator
-  namespace: ${NAMESPACE}
+  namespace: middleware
   labels:
     control-plane: elastic-operator
     app.kubernetes.io/version: "1.6.0"
@@ -4431,14 +4432,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: elastic-operator
-  namespace: ${NAMESPACE}
+  namespace: middleware
 ---
 # Source: eck-operator/templates/webhook.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: elastic-webhook-server
-  namespace: ${NAMESPACE}
+  namespace: middleware
   labels:
     control-plane: elastic-operator
     app.kubernetes.io/version: "1.6.0"
@@ -4455,7 +4456,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: elastic-operator
-  namespace: ${NAMESPACE}
+  namespace: middleware
   labels:
     control-plane: elastic-operator
     app.kubernetes.io/version: "1.6.0"
@@ -4538,7 +4539,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-agent-k8s-elastic-co-v1alpha1-agent
   failurePolicy: Ignore
   name: elastic-agent-validation-v1alpha1.k8s.elastic.co
@@ -4556,7 +4557,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-apm-k8s-elastic-co-v1-apmserver
   failurePolicy: Ignore
   name: elastic-apm-validation-v1.k8s.elastic.co
@@ -4574,7 +4575,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-apm-k8s-elastic-co-v1beta1-apmserver
   failurePolicy: Ignore
   name: elastic-apm-validation-v1beta1.k8s.elastic.co
@@ -4592,7 +4593,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-beat-k8s-elastic-co-v1beta1-beat
   failurePolicy: Ignore
   name: elastic-beat-validation-v1beta1.k8s.elastic.co
@@ -4610,7 +4611,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-enterprisesearch-k8s-elastic-co-v1-enterprisesearch
   failurePolicy: Ignore
   name: elastic-ent-validation-v1.k8s.elastic.co
@@ -4628,7 +4629,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-enterprisesearch-k8s-elastic-co-v1beta1-enterprisesearch
   failurePolicy: Ignore
   name: elastic-ent-validation-v1beta1.k8s.elastic.co
@@ -4646,7 +4647,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-elasticsearch-k8s-elastic-co-v1-elasticsearch
   failurePolicy: Ignore
   name: elastic-es-validation-v1.k8s.elastic.co
@@ -4664,7 +4665,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-elasticsearch-k8s-elastic-co-v1beta1-elasticsearch
   failurePolicy: Ignore
   name: elastic-es-validation-v1beta1.k8s.elastic.co
@@ -4682,7 +4683,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-kibana-k8s-elastic-co-v1-kibana
   failurePolicy: Ignore
   name: elastic-kb-validation-v1.k8s.elastic.co
@@ -4700,7 +4701,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: elastic-webhook-server
-      namespace: ${NAMESPACE}
+      namespace: middleware
       path: /validate-kibana-k8s-elastic-co-v1beta1-kibana
   failurePolicy: Ignore
   name: elastic-kb-validation-v1beta1.k8s.elastic.co

@@ -91,7 +91,6 @@ echo "部署skywalking、eck到 ${NAMESPACE}，使用域名后缀为：${DOMAIN}
 mkdirIfAbsent ${DELOY_DIR}
 rm -rf ${DELOY_DIR}/*
 
-cp eck/all-in-one.yml ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 cp eck/elasticsearch.yml ${DELOY_DIR}/es.yml.${NAMESPACE}
 cp eck/kibana.yml ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 cp eck/filebeat.yml ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
@@ -99,7 +98,6 @@ cp skywalking-oap.yml ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
 
 
 
-sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/es.yml.${NAMESPACE}
 sed -i "s/\${NAMESPACE}/${NAMESPACE}/g" ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/kibana.yml.${NAMESPACE}
@@ -110,7 +108,7 @@ sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
 
 
 
-kubectl apply -f ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
+kubectl apply -f eck/all-in-one.yml.${NAMESPACE}
 checkPod ${NAMESPACE} elastic-operator 1
 kubectl apply -f ${DELOY_DIR}/es.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/kibana.yml.${NAMESPACE}

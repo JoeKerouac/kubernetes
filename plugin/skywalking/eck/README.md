@@ -16,3 +16,6 @@
 - docker.elastic.co/eck/eck-operator:1.6.0
 - docker.elastic.co/elasticsearch/elasticsearch:7.13.3
 - docker.elastic.co/kibana/kibana:7.13.3
+
+
+** 注意，elastic-operator在整个集群只能部署一份 **
