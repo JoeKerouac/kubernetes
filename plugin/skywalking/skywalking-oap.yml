@@ -116,11 +116,6 @@ spec:
           name: grpc
         - containerPort: 12800
           name: rest
-        volumeMounts:
-          # 将application.yml挂载到/skywalking/config/application.yml，注意，这里要使用subPath，不然会将/skywalking/config目录全部覆盖
-          - mountPath: /skywalking/config/application.yml
-            subPath: application.yml
-            name: application.yml
         env:
         - name: JAVA_OPTS
           value: "-Xms2g -Xmx2g"
@@ -203,13 +198,6 @@ spec:
         key: node.kubernetes.io/network-unavailable
         operator: Exists
         tolerationSeconds: 5
-      volumes:
-        - name: application.yml
-          configMap:
-            name: skywalking-oap
-            items:
-              - key: application.yml
-                path: application.yml
 
 ---
 apiVersion: v1

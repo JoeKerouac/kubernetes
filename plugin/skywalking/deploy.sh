@@ -30,6 +30,54 @@ mkdirIfAbsent() {
 }
 
 
+##########################################
+##
+## 部署检查，检查部署是否成功
+##
+##########################################
+
+function checkPod() {
+echo "容器部署检查"
+
+# 检查超时时间，单位秒
+timeout=600
+# 当前检查时间
+now=0
+
+# 线下环境超时检查设置为10分钟
+echo "当前部署成功检查超时时间设置为${timeout}秒"
+
+
+ENV=$1
+APP_NAME=$2
+REP=$3
+while [ $now -le $timeout ]; do
+    sleep 1
+    now=`expr ${now} + 1`
+
+    # 获取运行中的pod数量，注意，不但要根据appName过滤，还要根据版本号过滤，注意，如果当前一个都没有这个命令会返回0，但是exit code不是0，也就是
+    # 本脚本不能set -e，不然这里就会退出
+    # 2/2是包含一个sidecar的场景
+    podRunningCount=`/usr/bin/kubectl get pod -n ${NAMESPACE} | grep ${APP_NAME} | grep 1/1 | grep -ci "Running"`
+
+    # 部署成功
+    if [ "$podRunningCount" == "${REP}" ];then
+        echo -e "the application ${APP_NAME} successfully deployed "
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        /usr/bin/kubectl get pod -o wide -n ${ENV} |grep ${APP_NAME}
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        return
+    fi
+done
+
+
+echo -e "the application ${APP_NAME} deploy failed "
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        /usr/bin/kubectl get pod -o wide -n ${ENV}|grep ${APP_NAME}
+        echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+}
+
+
 
 # 本次要部署的namespace
 NAMESPACE=$1
@@ -63,7 +111,28 @@ sed -i "s/\${DOMAIN}/${DOMAIN}/g" ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
 
 
 kubectl apply -f ${DELOY_DIR}/all-in-one.yml.${NAMESPACE}
+checkPod ${NAMESPACE} elastic-operator 1
 kubectl apply -f ${DELOY_DIR}/es.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/kibana.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/filebeat.yml.${NAMESPACE}
 kubectl apply -f ${DELOY_DIR}/skywalking-oap.yml.${NAMESPACE}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
