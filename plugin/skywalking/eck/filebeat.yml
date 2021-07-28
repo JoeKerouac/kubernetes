@@ -20,10 +20,10 @@ data:
     
       # 所有行必须以[开头，如果不是[开头说明是上一行，例如异常栈
       multiline.pattern: ^\[
-      # 默认false，表示匹配上边的是新行，如果设置为true，则表示不匹配上边的是新行
-      multiline.negate: false
+      # 默认false，表示不匹配上边的是基准行，更改为true，表示匹配上边的是基准行
+      multiline.negate: true
     
-      # "after" 或者 "before"，定义匹配的行应该和前边不匹配的行定义为一行还是和后边不匹配的行定义为一行，默认是after
+      # "after" 或者 "before"，定义基准行和基准行后边或者前边的应该是一行，after表示基准行之后
       multiline.match: after
     
     # ============================== Filebeat modules ==============================
