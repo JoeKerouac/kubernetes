@@ -58,7 +58,7 @@ while [ $now -le $timeout ]; do
     # 获取运行中的pod数量，注意，不但要根据appName过滤，还要根据版本号过滤，注意，如果当前一个都没有这个命令会返回0，但是exit code不是0，也就是
     # 本脚本不能set -e，不然这里就会退出
     # 2/2是包含一个sidecar的场景
-    podRunningCount=`/usr/bin/kubectl get pod -n ${NAMESPACE} | grep ${APP_NAME} | grep 1/1 | grep -ci "Running"`
+    podRunningCount=`/usr/bin/kubectl get pod -n ${NAMESPACE} | grep ${APP_NAME} | grep 1/1 | grep -ci "Running"` || true
 
     # 部署成功
     if [ "$podRunningCount" == "${REP}" ];then
