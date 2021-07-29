@@ -36,10 +36,14 @@ data:
       reload.period: 10s
     
     # ======================= Elasticsearch template setting =======================
-    
+
+    setup.template.name: "k8s-filebeat"
+    setup.template.pattern: "k8s-filebeat-*"
     setup.template.settings:
       # 数据分片
       index.number_of_shards: 10
+      # 数据副本数，只有一个副本，丢了就丢了
+      index.number_of_replicas: 1
       # 数据压缩方法
       index.codec: best_compression
       #_source.enabled: false
@@ -86,7 +90,9 @@ data:
       #api_key: "id:api_key"
       username: "elastic"
       password: "${ES_PASSWORD}"
-    
+      # 指定es的index，每天滚动一次，
+      index: "k8s-filebeat-${APP_NAME}-%{+yyyy.MM.dd}"
+
     # ------------------------------ Logstash Output -------------------------------
     #output.logstash:
       # The Logstash hosts
