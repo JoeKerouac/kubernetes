@@ -1,3 +1,12 @@
+#########################################
+#
+# 注意，该配置文件依赖于当前环境变量中包含以下值：
+# APP_NAME：当前应用名
+# ENV：当前环境（namespace）
+# POD_NAME：当前pod的名字
+# 同时依赖一个生命周期策略：k8s-filebeat
+#
+########################################
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -36,9 +45,22 @@ data:
       reload.period: 10s
     
     # ======================= Elasticsearch template setting =======================
-
+    # 注意，这个很关键，如果这个是true（默认auto）则setup.template.name和setup.template.pattern将会失效，详细参考
+    # 官方文档：https://www.elastic.co/guide/en/beats/filebeat/current/ilm.html
+    setup.ilm.enabled: false
+    # 声明周期策略名称
+    #setup.ilm.policy_name: "k8s-log"
+    # 默认true，索引生命周期策略每次重启filebeat都会覆盖（也就是期间对该策略的修改都会失效）
+    #setup.ilm.overwrite: false
+    # 索引生命周期json定义文件，这里写死路径，我们需要将该文件挂载到容器中
+    #setup.ilm.policy_file: /filebeat/filebeat-7.13.3-linux-x86_64/lifecycle-policy.json
+    # 禁止覆盖
+    setup.template.overwrite: false
+    # 自动创建的模板的名称
     setup.template.name: "k8s-filebeat"
+    # 模板匹配规则，index创建的时候如果名称符合这个规则则使用这个模板
     setup.template.pattern: "k8s-filebeat-*"
+    # 模板设置
     setup.template.settings:
       # 数据分片
       index.number_of_shards: 10
@@ -46,6 +68,12 @@ data:
       index.number_of_replicas: 1
       # 数据压缩方法
       index.codec: best_compression
+      # 指定生命周期策略
+      index.lifecycle:
+        name: "k8s-filebeat"
+      index.query.default_field:
+      - "message"
+      - "fields.*"
       #_source.enabled: false
     
     # =================================== Kibana ===================================
@@ -90,8 +118,7 @@ data:
       #api_key: "id:api_key"
       username: "elastic"
       password: "${ES_PASSWORD}"
-      # 指定es的index，每天滚动一次，
-      index: "k8s-filebeat-${APP_NAME}-%{+yyyy.MM.dd}"
+      index: "k8s-filebeat-%{[agent.version]}-%{[fields.appName]}-%{[agent.version]}-%{+yyyy.MM.dd}"
 
     # ------------------------------ Logstash Output -------------------------------
     #output.logstash:
