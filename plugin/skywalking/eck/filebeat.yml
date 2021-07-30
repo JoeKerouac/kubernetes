@@ -64,8 +64,8 @@ data:
     setup.template.settings:
       # 数据分片
       index.number_of_shards: 10
-      # 数据副本数，只有一个副本，丢了就丢了
-      index.number_of_replicas: 1
+      # 数据冗余副本数，不设置冗余副本，丢了就丢了
+      index.number_of_replicas: 0
       # 数据压缩方法
       index.codec: best_compression
       # 指定生命周期策略
