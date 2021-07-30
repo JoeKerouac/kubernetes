@@ -71,6 +71,7 @@ data:
       # 指定生命周期策略
       index.lifecycle:
         name: "k8s-filebeat"
+        rollover_alias: "k8s-filebeat"
       index.query.default_field:
       - "message"
       - "fields.*"
