@@ -119,7 +119,7 @@ data:
       #api_key: "id:api_key"
       username: "elastic"
       password: "${ES_PASSWORD}"
-      index: "k8s-filebeat-%{[agent.version]}-%{[fields.appName]}-%{[agent.version]}-%{+yyyy.MM.dd}-%{index_num}"
+      index: "k8s-filebeat-%{[agent.version]}-%{[fields.appName]}-%{[agent.version]}-%{+yyyy.MM.dd}"
 
     # ------------------------------ Logstash Output -------------------------------
     #output.logstash:
