@@ -13,6 +13,8 @@ metadata:
   name: filebeat
   namespace: ${NAMESPACE}
 data:
+  k8s-index-template.json: |-
+
   filebeat.yml: |-
     # ============================== Filebeat inputs ===============================
     filebeat.inputs:
@@ -56,6 +58,11 @@ data:
     #setup.ilm.policy_file: /filebeat/filebeat-7.13.3-linux-x86_64/lifecycle-policy.json
     # 禁止覆盖
     setup.template.overwrite: false
+    # 使用json文件创建template模板
+    setup.template.json.enabled: true
+    setup.template.json.path: "/filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json"
+    setup.template.json.name: "k8s-filebeat-${APP_NAME}"
+
     # 自动创建的模板的名称
     setup.template.name: "k8s-filebeat"
     # 模板匹配规则，index创建的时候如果名称符合这个规则则使用这个模板
