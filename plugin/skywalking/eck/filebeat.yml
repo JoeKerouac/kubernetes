@@ -13,8 +13,44 @@ metadata:
   name: filebeat
   namespace: ${NAMESPACE}
 data:
+  # 初始化脚本
+  init.sh: |-
+    DATE=`date +%Y-%m-%d_%H:%M:%S`
+    export DATE
+    cat /filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json | envsubst | cat > /filebeat/filebeat-7.13.3-linux-x86_64/index.json
   k8s-index-template.json: |-
-
+    {
+    	"index_patterns": ["k8s-filebeat-${APP_NAME}-*"],
+    	"template": {
+    		"settings": {
+    			"lifecycle": {
+    				"name": "k8s-filebeat",
+    				"rollover_alias": "k8s-filebeat-${APP_NAME}"
+    			},
+    			"codec": "best_compression",
+    			"mapping": {
+    				"total_fields": {
+    					"limit": "10000"
+    				}
+    			},
+    			"refresh_interval": "5s",
+    			"number_of_shards": "10",
+    			"max_docvalue_fields_search": "200",
+    			"query": {
+    				"default_field": [
+    					"message",
+    					"fields.*"
+    				]
+    			},
+    			"number_of_replicas": "0"
+    		},
+    		"aliases": {
+    			"${APP_NAME}": {
+    				"is_write_index": true
+    			}
+    		}
+    	}
+    }
   filebeat.yml: |-
     # ============================== Filebeat inputs ===============================
     filebeat.inputs:
@@ -60,7 +96,7 @@ data:
     setup.template.overwrite: false
     # 使用json文件创建template模板
     setup.template.json.enabled: true
-    setup.template.json.path: "/filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json"
+    setup.template.json.path: "/filebeat/filebeat-7.13.3-linux-x86_64/index.json"
     setup.template.json.name: "k8s-filebeat-${APP_NAME}"
 
     # 自动创建的模板的名称

@@ -12,7 +12,8 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
 RUN mkdir /filebeat \
     && curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.13.3-linux-x86_64.tar.gz -o /filebeat/filebeat-7.13.3-linux-x86_64.tar.gz \
     && tar -zxvf /filebeat/filebeat-7.13.3-linux-x86_64.tar.gz -C /filebeat \
-    && rm -rf /filebeat/filebeat-7.13.3-linux-x86_64.tar.gz
+    && rm -rf /filebeat/filebeat-7.13.3-linux-x86_64.tar.gz \
+    && yum install -y gettext
 
 COPY startup.sh /filebeat/
 
