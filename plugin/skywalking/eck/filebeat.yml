@@ -21,9 +21,9 @@ data:
 
     # 开启elasticsearch模块
     /filebeat/filebeat-7.13.3-linux-x86_64/filebeat modules enable elasticsearch --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
-    # 初始化配置
-    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --modules elasticsearch  --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
-    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --index-management --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
+    # 初始化配置，注意，这里边有个问题，就是如果setup命令不指定 --index-management、--pipelines、--machine-learning、--dashboards、--ilm-policy、--template这几个
+    # 任意一个，那么最终这几个都将打开，这个官方文档并没有说明，我们这里选择只打开 index-management，不打开其他几个
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --modules elasticsearch --index-management --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
   k8s-index-template.json: |-
     {
         "index_patterns": [
