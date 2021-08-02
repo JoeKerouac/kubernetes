@@ -20,10 +20,10 @@ data:
     cat /filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json | envsubst | cat > /filebeat/filebeat-7.13.3-linux-x86_64/index.json
 
     # 开启elasticsearch模块
-    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat modules enable elasticsearch
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat modules enable elasticsearch --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
     # 初始化配置
-    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --modules elasticsearch
-    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --index-management
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --modules elasticsearch  --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --index-management --path.home "/filebeat/filebeat-7.13.3-linux-x86_64"
   k8s-index-template.json: |-
     {
         "index_patterns": [
