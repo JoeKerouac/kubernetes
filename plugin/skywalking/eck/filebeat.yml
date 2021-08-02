@@ -18,6 +18,12 @@ data:
     DATE=`date +%Y-%m-%d_%H:%M:%S`
     export DATE
     cat /filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json | envsubst | cat > /filebeat/filebeat-7.13.3-linux-x86_64/index.json
+
+    # 开启elasticsearch模块
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat modules enable elasticsearch
+    # 初始化配置
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --modules elasticsearch
+    /filebeat/filebeat-7.13.3-linux-x86_64/filebeat setup --index-management
   k8s-index-template.json: |-
     {
         "index_patterns": [
@@ -76,7 +82,7 @@ data:
       reload.enabled: true
       # 配置重载时间间隔
       reload.period: 10s
-    
+
     # ======================= Elasticsearch template setting =======================
     # 注意，这个很关键，如果这个是true（默认auto）则setup.template.name和setup.template.pattern将会失效，详细参考
     # 官方文档：https://www.elastic.co/guide/en/beats/filebeat/current/ilm.html
