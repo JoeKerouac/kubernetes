@@ -4,7 +4,7 @@
 # APP_NAME：当前应用名
 # ENV：当前环境（namespace）
 # POD_NAME：当前pod的名字
-# 同时依赖一个生命周期策略：k8s-filebeat
+# 同时依赖一个生命周期策略：k8s-filebeat-log-ilm
 #
 ########################################
 apiVersion: v1
@@ -20,36 +20,31 @@ data:
     cat /filebeat/filebeat-7.13.3-linux-x86_64/k8s-index-template.json | envsubst | cat > /filebeat/filebeat-7.13.3-linux-x86_64/index.json
   k8s-index-template.json: |-
     {
-    	"index_patterns": ["k8s-filebeat-${APP_NAME}-*"],
-    	"template": {
-    		"settings": {
-    			"lifecycle": {
-    				"name": "k8s-filebeat",
-    				"rollover_alias": "k8s-filebeat-${APP_NAME}"
-    			},
-    			"codec": "best_compression",
-    			"mapping": {
-    				"total_fields": {
-    					"limit": "10000"
-    				}
-    			},
-    			"refresh_interval": "5s",
-    			"number_of_shards": "10",
-    			"max_docvalue_fields_search": "200",
-    			"query": {
-    				"default_field": [
-    					"message",
-    					"fields.*"
-    				]
-    			},
-    			"number_of_replicas": "0"
-    		},
-    		"aliases": {
-    			"${APP_NAME}": {
-    				"is_write_index": true
-    			}
-    		}
-    	}
+        "index_patterns": [
+            "k8s-filebeat-${APP_NAME}-*"
+        ],
+        "settings": {
+            "lifecycle": {
+                "name": "k8s-filebeat-log-ilm",
+                "rollover_alias": "k8s-filebeat-${APP_NAME}"
+            },
+            "codec": "best_compression",
+            "mapping": {
+                "total_fields": {
+                    "limit": "10000"
+                }
+            },
+            "refresh_interval": "5s",
+            "number_of_shards": "10",
+            "max_docvalue_fields_search": "200",
+            "query": {
+                "default_field": [
+                    "message",
+                    "fields.*"
+                ]
+            },
+            "number_of_replicas": "0"
+        }
     }
   filebeat.yml: |-
     # ============================== Filebeat inputs ===============================
@@ -85,67 +80,42 @@ data:
     # ======================= Elasticsearch template setting =======================
     # 注意，这个很关键，如果这个是true（默认auto）则setup.template.name和setup.template.pattern将会失效，详细参考
     # 官方文档：https://www.elastic.co/guide/en/beats/filebeat/current/ilm.html
-    setup.ilm.enabled: false
+    ##############################################################################################################################
+    ##
+    ## 注意这里的逻辑，如果启用setup.ilm.enabled（auto或者true），那么setup.template.name、output.elasticsearch.index和setup.template.pattern将会失效，这块儿详细
+    ## 参考官方文档：https://www.elastic.co/guide/en/beats/filebeat/current/ilm.html
+    ##
+    ## 另外需要注意的是，即使打开setup.ilm.enabled，如果打开setup.template.json.enabled，那么也会以我们提供的json文件为主构建index template（即使json文件中没有指定字段
+    ## 也不会使用setup.ilm相关的参数生成）;
+    ##
+    ## 而如果关闭setup.template.json.enabled，那么会使用setup.ilm.rollover_alias作为别名，使用setup.ilm.rollover_alias + -*作为pattern构建index template，
+    ## 使用setup.ilm.rollover_alias + - + setup.ilm.pattern作为实际生成的index name，使用setup.ilm.policy_name作为ilm策略名生成策略；
+    ##
+    ##############################################################################################################################
+    setup.ilm.enabled: true
+    # 最终的index name将会是setup.ilm.rollover_alias + - + setup.ilm.pattern
+    setup.ilm.rollover_alias: "k8s-filebeat-${APP_NAME}"
+    setup.ilm.pattern: "{now/d}-000001"
     # 声明周期策略名称
-    #setup.ilm.policy_name: "k8s-log"
     # 默认true，索引生命周期策略每次重启filebeat都会覆盖（也就是期间对该策略的修改都会失效）
-    #setup.ilm.overwrite: false
+    setup.ilm.overwrite: false
     # 索引生命周期json定义文件，这里写死路径，我们需要将该文件挂载到容器中
-    #setup.ilm.policy_file: /filebeat/filebeat-7.13.3-linux-x86_64/lifecycle-policy.json
     # 禁止覆盖
     setup.template.overwrite: false
     # 使用json文件创建template模板
     setup.template.json.enabled: true
     setup.template.json.path: "/filebeat/filebeat-7.13.3-linux-x86_64/index.json"
     setup.template.json.name: "k8s-filebeat-${APP_NAME}"
+    #setup.ilm.policy_file: /filebeat/filebeat-7.13.3-linux-x86_64/lifecycle-policy.json
 
-    # 自动创建的模板的名称
-    setup.template.name: "k8s-filebeat"
-    # 模板匹配规则，index创建的时候如果名称符合这个规则则使用这个模板
-    setup.template.pattern: "k8s-filebeat-*"
-    # 模板设置
-    setup.template.settings:
-      # 数据分片
-      index.number_of_shards: 10
-      # 数据冗余副本数，不设置冗余副本，丢了就丢了
-      index.number_of_replicas: 0
-      # 数据压缩方法
-      index.codec: best_compression
-      # 指定生命周期策略
-      index.lifecycle:
-        name: "k8s-filebeat"
-        rollover_alias: "k8s-filebeat"
-      index.query.default_field:
-      - "message"
-      - "fields.*"
-      #_source.enabled: false
-    
     # =================================== Kibana ===================================
-    
-    
+
     setup.kibana:
       host: "eck-kb-http:5601"
       username: "elastic"
       password: "${ES_PASSWORD}"
-    
-      # Kibana Space ID
-      # ID of the Kibana Space into which the dashboards should be loaded. By default,
-      # the Default Space will be used.
-      #space.id:
-    
-    # =============================== Elastic Cloud ================================
-    
-    # These settings simplify using Filebeat with the Elastic Cloud (https://cloud.elastic.co/).
-    
-    # The cloud.id setting overwrites the `output.elasticsearch.hosts` and
-    # `setup.kibana.host` options.
-    # You can find the `cloud.id` in the Elastic Cloud web UI.
-    #cloud.id:
-    
-    # The cloud.auth setting overwrites the `output.elasticsearch.username` and
-    # `output.elasticsearch.password` settings. The format is `<user>:<pass>`.
-    #cloud.auth:
-    
+
+
     # ================================== Outputs ===================================
     
     # Configure what output to use when sending the data collected by the beat.
@@ -162,7 +132,6 @@ data:
       #api_key: "id:api_key"
       username: "elastic"
       password: "${ES_PASSWORD}"
-      index: "k8s-filebeat-%{[agent.version]}-%{[fields.appName]}-%{[agent.version]}-%{+yyyy.MM.dd}"
 
     # ------------------------------ Logstash Output -------------------------------
     #output.logstash:
