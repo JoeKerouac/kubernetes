@@ -67,15 +67,12 @@ data:
             source: >
               function process(event) {
                   var msg = event.Get("message");
-
                   var pattern = /^\[.*?\]\[(.*?)\].*/g;
                   var result = pattern.exec(msg);
-
                   var level = "UNKNOWN";
                   if (result != null) {
                       level = result[1];
                   }
-
                   event.Put("fields.log_level", level.toString().toLowerCase());
               }
       # 添加自定义字段
