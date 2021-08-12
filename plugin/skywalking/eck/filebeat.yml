@@ -59,7 +59,25 @@ data:
       enabled: true
       paths:
         - /data/glusterfs/**/*.log
-    
+      # 添加自定义处理器，用于解析日志，这里解析日志级别，并将其添加为fields字段，注意日志必须是以[2021-08-12 15:48:00][DEBUG]....这种形式开头的，否则需要修改后边的js代码
+      processors:
+        - script:
+            lang: javascript
+            id: logline-parser
+            source: >
+              function process(event) {
+                  var msg = event.Get("message");
+
+                  var pattern = /^\[.*?\]\[(.*?)\].*/g;
+                  var result = pattern.exec(msg);
+
+                  var level = "UNKNOWN";
+                  if (result != null) {
+                      level = result[1];
+                  }
+
+                  event.Put("fields.log_level", level.toString().toLowerCase());
+              }
       # 添加自定义字段
       fields:
         env: ${ENV}
