@@ -4,7 +4,9 @@
 ## ${NAMESPACE}: 要部署到哪个namespace中
 ## ${DOMAIN}：域名后缀，注意不要以.开头
 ##
-## 使用ES时无需替换变量（默认模板时ES的）
+## 使用ES时需替换以下变量（默认模板时ES的）：
+## ${SW_NAMESPACE}：存储在es中的前缀，默认可以设置sw，如果多个sky walking共享一个ES集群的话可以设置这个来区分
+## ${SW_STORAGE_ES_INDEX_REPLICAS_NUMBER}：存储在es中的数据的副本数，默认可以设置1，如果允许数据丢失可以设置0
 ##
 ## 如果使用MySQL，请替换以下变量
 ## ${MYSQL_PASSWORD}: mysql root用户密码；
@@ -141,6 +143,10 @@ spec:
         # 这里使用es7作为后端存储，这块儿比MySQL好使，es安装参考es的安装
         - name: SW_STORAGE
           value: elasticsearch7
+        - name: SW_NAMESPACE
+          value: ${SW_NAMESPACE}
+        - name: SW_STORAGE_ES_INDEX_REPLICAS_NUMBER
+          value: ${SW_STORAGE_ES_INDEX_REPLICAS_NUMBER}
         - name: SW_ES_USER
           value: elastic
         - name: SW_ES_PASSWORD
