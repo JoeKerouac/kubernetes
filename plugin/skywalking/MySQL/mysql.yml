@@ -101,16 +101,16 @@ data:
 
     # 查询超时时间，SELECT语句超过该时间后会被超时处理，单位毫秒；0表示永远不超时；对于存储过程中的select语句忽略该选项；
     max_execution_time=300000
-    # 如果sql语句预计需要检索的数据超过该行数，那么将会被禁止执行；
-    max_join_size=1000000
+    # 如果join到当前表的记录数预计大于该数量，则直接返回error
+    max_join_size=10000
     # 每个join使用一个join_buffer，一个语句中有多个join会创建多个join_buffer
     join_buffer_size=1M
     # 预编译语句的最大数量，最小0，最大1048576，设置为0表示禁用预编译语句；
-    max_prepared_stmt_count=1000
+    max_prepared_stmt_count=10000
     # 执行sql时分配内存块的大小，单位byte，如果内存碎片问题严重可以适当调大该值；最小1024，最大4294967295
-    query_alloc_block_size=8192
-    # 排序缓冲区大小
-    sort_buffer_size=128M
+    query_alloc_block_size=4096
+    # 排序缓冲区大小，connection级别
+    sort_buffer_size=2M
     # 全局事务隔离级别，READ-UNCOMMITTED、READ-COMMITTED、REPEATABLE-READ、SERIALIZABLE
     # READ-UNCOMMITTED：一个事务可以读取到另外一个未提交事务修改的记录；会有脏读问题；
     # READ-COMMITTED：一个事务只能读取到另外一个事务提交后的修改记录，如果事务A先读取了数据data，然后事务B修改了data并提交，事务A此时重新读取数据data会发现数据data更改了，出现不可重复读的现象；
@@ -121,7 +121,7 @@ data:
     transaction_isolation=REPEATABLE-READ
 
 
-    # 用于客户端连接的线程池大小，默认值为8 + (max_connections / 100)，上限100
+    # 线程池最小大小，当线程空闲时并且当前线程数量小于等于该值，则线程不回收，而是缓存起来等待下次来链接时使用，默认值为8 + (max_connections / 100)，上限100
     thread_cache_size=10
     # 客户端连接使用的线程模型；
     # one-thread-per-connection：一个线程处理所有连接
@@ -129,9 +129,9 @@ data:
     # loaded-dynamically：使用线程池插件初始化
     thread_handling=one-thread-per-connection
 
-    # 每个事务的内存池初始大小；最小1024，最大131072；如果内存池不够用则会继续申请内存，每次申请transaction_alloc_block_size大小的内存，事务结束后释放这部分内存，保留transaction_prealloc_size；
+    # 每个事务的内存池初始大小；最小1024，最大131072（128K）；如果内存池不够用则会继续申请内存，每次申请transaction_alloc_block_size大小的内存，事务结束后释放这部分内存，保留transaction_prealloc_size；
     transaction_prealloc_size=8K
-    # 当事务内存池不够时申请内存块的大小，每次申请该配置大小的内存，单位byte；最小1024，最大131072；
+    # 当事务内存池不够时申请内存块的大小，每次申请该配置大小的内存，单位byte；最小1024，最大131072（128K）；
     transaction_alloc_block_size=16K
 
 
@@ -155,27 +155,27 @@ data:
     log_bin_index=binlog.index
     # 服务端ID，多个实例应该设置不同，启用binlog必须设置该值
     server_id=1
-    # 事务binlog日志缓冲区大小，每个客户端一个；
+    # 事务binlog日志缓冲区大小，connection级别，必须是4K的整数倍；，可以查看Binlog_cache_disk_use的值来判断是否需要调大该值；
     binlog_cache_size=1M
-    # 非事务binlog日志缓冲区大小，每个客户端一个；
-    binlog_stmt_cache_size=8K
+    # 事务binlog缓冲区最大值
+    max_binlog_cache_size=256M
+    # 非事务binlog日志缓冲区大小，connection级别，必须是4K的整数倍；可以查看Binlog_stmt_cache_disk_use的值来判断是否需要调大该值
+    binlog_stmt_cache_size=1M
+    # 非事务binlog日志缓冲区大小，全局级别；
+    max_binlog_stmt_cache_size=256M
     # binlog的格式，ROW、STATEMENT、MIXED，
     binlog_format=ROW
     # binlog group多少微秒刷一次磁盘，0表示立即刷盘；
-    binlog_group_commit_sync_delay=100000
+    binlog_group_commit_sync_delay=500000
     # binlog group中binlog条数大于该值时会立即刷盘
-    binlog_group_commit_sync_no_delay_count=10
+    binlog_group_commit_sync_no_delay_count=100
     # binlog刷盘频率控制；
     # 0表示依赖操作系统不时将binlog刷到磁盘，服务器掉电时可能导致存在没有同步到binlog的事务，即事务完成了但是binlog没有写出；
     # 1表示在事务完成前先将binlog刷到磁盘；
     # 其他：如果值大于1，每N个binlog合并提交给group后同步到磁盘，binlog_group_commit_sync_delay控制多久刷新一次；
     sync_binlog=1
     # binlog保存天数，超过该时间将会被清除，0表示不清除；
-    expire_logs_days=30
-    # 事务binlog缓冲区最大值
-    max_binlog_cache_size=4G
-    # 如果非事务语句生成的binlog大于该值则会报错；
-    max_binlog_stmt_cache_size=4G
+    expire_logs_days=365
     # binlog文件最大存储量，超过后会新建一个文件，最小4K，最大1G，同时同一个事务的binlog肯定会在同一个文件，所以可能最终binlog文件可能会大于该限制；
     max_binlog_size=500M
 
