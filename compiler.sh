@@ -974,7 +974,7 @@ cp ${NOW_DIR}/template/metrics-server.yml ${PLUGIN_INSTALLER_DIR}
 cp ${NOW_DIR}/template/kuboard.yml ${PLUGIN_INSTALLER_DIR}
 
 
-cat << 'EOF' > install-plugins.sh
+cat << 'EOF' > ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 set -o nounset
 set -e
 
@@ -1013,7 +1013,7 @@ KUBOARD_HOST=$2
 EOF
 
 
-cat << EOF >> install-plugins.sh
+cat << EOF >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 
 ###################################################################################################################
 ##
@@ -1060,7 +1060,7 @@ kubectl apply -f ${NOW_DIR}/metrics-server.yml
 
 EOF
 
-cat << 'EOF' >> install-plugins.sh
+cat << 'EOF' >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 ###################################################################################################################
 ##
 ## kuboard 安装，依赖 traefik-server
