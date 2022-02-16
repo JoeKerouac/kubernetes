@@ -1041,12 +1041,15 @@ kubectl apply -f ${NOW_DIR}/ingress-traefik.yml
 
 kubectl apply -f ${NOW_DIR}/metrics-server.yml
 
+
+EOF
+
+cat << 'EOF' >> install-plugins.sh
 ###################################################################################################################
 ##
 ## kuboard 安装，依赖 traefik-server
 ##
 ###################################################################################################################
-
 
 sed -i "s/\${etcdAddr}/${ETCD_SERVER}/g" ${NOW_DIR}/kuboard.yml
 sed -i "s/\${kuboardHost}/${KUBOARD_HOST}/g" ${NOW_DIR}/kuboard.yml
