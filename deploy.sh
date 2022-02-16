@@ -189,11 +189,11 @@ do
     execRemote ${MASTER_SSH_PORT} ${MASTER_SSH_USER} ${SLAVE_IPS[${i}]} ${MASTER_SSH_PASSWD} "mkdir -p ${K8S_INSTALLER_DIR}"
     echo "将二进制文件分发到 ${SLAVE_IPS[${i}]}"
     # 注意，源目录后边加了斜杠和点，表示只把目录中的内容copy过去，不copy目录本身，不加表示将目录也copy过去
-    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBELET_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
-    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${PROXY_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
-    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBECTL_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
-    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${NOW_DIR}/shell/clientInstall.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
-    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${COMPILE_TARGET_DIR}/clientDeploy.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD}
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBELET_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD} & echo "${KUBELET_COMPILE_TARGET_DIR}分发完毕"
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${PROXY_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD} & echo "${PROXY_COMPILE_TARGET_DIR}分发完毕"
+    execSSHWithoutPasswd "scp -r -P ${MASTER_SSH_PORT} ${KUBECTL_COMPILE_TARGET_DIR} ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD} & echo "${KUBECTL_COMPILE_TARGET_DIR}分发完毕"
+    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${NOW_DIR}/shell/clientInstall.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD} & echo "${NOW_DIR}/shell/clientInstall.sh分发完毕"
+    execSSHWithoutPasswd "scp -P ${MASTER_SSH_PORT} ${COMPILE_TARGET_DIR}/clientDeploy.sh ${MASTER_SSH_USER}@${SLAVE_IPS[${i}]}:${K8S_INSTALLER_DIR}" ${MASTER_SSH_PASSWD} & echo "${COMPILE_TARGET_DIR}/clientDeploy.sh分发完毕"
     echo "二进制文件分发完毕"
 
     execRemote ${SLAVE_SSH_PORT} ${SLAVE_SSH_USER} ${SLAVE_IPS[${i}]} ${SLAVE_SSH_PASSWD} "sh ${K8S_INSTALLER_DIR}/clientDeploy.sh ${SLAVE_IPS[${i}]} "

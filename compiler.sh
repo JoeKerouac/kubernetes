@@ -68,6 +68,7 @@ CONTROLLER_MANAGER_PORT=10257
 # scheduler监听端口号
 SCHEDULER_PORT=10259
 KUBELET_PORT=10250
+# apiserver的完整访问地址
 APISERVER_DOMAIN=https://${APISERVER_IP}:${APISERVER_SECURE_PORT}
 
 
@@ -459,7 +460,7 @@ STATE=${STATE}
 EOF
 
 cat << 'OUTER' >> ${CM_INSTALLER_DIR}/install.sh
-createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}:${APISERVER_SECURE_PORT}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
+createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
 
 CONTROLLER_MANAGER_ENV=${BASE_DIR}/config/controller-manager.service.env
 SERVICE_ACCOUNT_PRIVATE_FILE=${BASE_DIR}/secure/serviceAccount.key
@@ -587,7 +588,7 @@ STATE=${STATE}
 EOF
 
 cat << 'OUTER' >> ${SCHEDULER_INSTALLER_DIR}/install.sh
-createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}:${APISERVER_SECURE_PORT}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
+createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
 
 SCHEDULER_LOG_DIR=${BASE_DIR}/log
 SCHEDULER_ENV=${BASE_DIR}/config/scheduler.service.env
@@ -719,7 +720,7 @@ STATE=${STATE}
 EOF
 
 cat << 'OUTER' >> ${KUBELET_INSTALLER_DIR}/install.sh
-createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}:${APISERVER_SECURE_PORT}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
+createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
 
 KUBELET_LOG_DIR=${BASE_DIR}/log
 KUBELET_ENV=${BASE_DIR}/config/kubelet.service.env
@@ -856,7 +857,7 @@ APISERVER_SECURE_PORT=${APISERVER_SECURE_PORT}
 EOF
 
 cat << 'OUTER' >> ${PROXY_INSTALLER_DIR}/install.sh
-createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}:${APISERVER_SECURE_PORT}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
+createKubeConfig /usr/bin/kubectl "${APISERVER_DOMAIN}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
 
 KUBE_PROXY_LOG_DIR=${BASE_DIR}/log
 KUBE_PROXY_ENV=${BASE_DIR}/config/kube-proxy.service.env
@@ -948,7 +949,7 @@ chmod +x ${BASE_DIR}/bin/kubectl
 # 放入本地库
 cp ${BASE_DIR}/bin/kubectl /usr/bin
 
-createKubeConfig ${BASE_DIR}/bin/kubectl "${APISERVER_DOMAIN}:${APISERVER_SECURE_PORT}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
+createKubeConfig ${BASE_DIR}/bin/kubectl "${APISERVER_DOMAIN}" ${BASE_DIR}/config/kubeconfig.yaml ${BASE_DIR}/secure/apiserver.ca.crt ${BASE_DIR}/secure/admin.key ${BASE_DIR}/secure/admin.crt
 
 # 为当前用户创建kubectl的配置目录，并将配置放入进去，方便后续kubectl操作
 mkdirIfAbsent ~/.kube
@@ -1022,9 +1023,9 @@ cat << EOF >> install-plugins.sh
 
 
 # K8S的service ip的范围，例如194.10.0.0/16
-sed -i "s/\${VIP_CIDR}/${VIP_RANGE}/g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\${VIP_CIDR}#${VIP_RANGE}#g" ${NOW_DIR}/core-dns.yml
 # pod的ip范围，例如193.0.0.0/8
-sed -i "s/\${POD_CIDR}/${CLUSTER_CIDR}/g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\${POD_CIDR}#${CLUSTER_CIDR}#g" ${NOW_DIR}/core-dns.yml
 # K8S集群的域名后缀，注意，这个域名只会使用K8S解析，不会转发到其他地方；
 sed -i "s/\${CLUSTER_DOMAIN}/${CLUSTER_DOMAIN}/g" ${NOW_DIR}/core-dns.yml
 # 响应给dns查询客户端的ttl
@@ -1032,7 +1033,7 @@ sed -i "s/\${DNS_TTL}/30/g" ${NOW_DIR}/core-dns.yml
 # Prometheus的端口号
 sed -i "s/\${PROMETHEUS_PORT}/9153/g" ${NOW_DIR}/core-dns.yml
 # 域名服务器（也可以是文件，例如/etc/resolv.conf），对于coredns无法解析的域名转发到该服务器解析；
-sed -i "s/\${UPSTREAMNAMESERVER}/${UPSTREAMNAMESERVER}/g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\${UPSTREAMNAMESERVER}#${UPSTREAMNAMESERVER}#g" ${NOW_DIR}/core-dns.yml
 # dns在集群中的service ip
 sed -i "s/\${CLUSTER_DNS_IP}/${CLUSTER_DNS_IP}/g" ${NOW_DIR}/core-dns.yml
 
