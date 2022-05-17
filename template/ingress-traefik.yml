@@ -129,7 +129,7 @@ spec:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: traefik-ingress-controller
+  name: traefik-ingress
 
 rules:
   - apiGroups:
@@ -178,15 +178,15 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: traefik-ingress-controller
+  name: traefik-ingress
 
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: traefik-ingress-controller
+  name: traefik-ingress
 subjects:
   - kind: ServiceAccount
-    name: traefik-ingress-controller
+    name: traefik-ingress
     namespace: kube-system
 
 
@@ -196,7 +196,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   namespace: kube-system
-  name: traefik-ingress-controller
+  name: traefik-ingress
 
 ---
 
@@ -205,21 +205,21 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-    name: traefik-ingress-controller
+    name: traefik-ingress
     namespace: kube-system
     labels:
-        app: traefik-ingress-lb
+        app: traefik-ingress
         kubernetes.io/cluster-service: "true"
 spec:
     replicas: 3
     selector:
         matchLabels:
-            app: traefik-ingress-lb
+            app: traefik-ingress
     template:
         metadata:
             labels:
-                app: traefik-ingress-lb
-                name: traefik-ingress-lb
+                app: traefik-ingress
+                name: traefik-ingress
         spec:
             dnsPolicy: ClusterFirstWithHostNet
             terminationGracePeriodSeconds: 10
@@ -231,7 +231,7 @@ spec:
                         - key: app
                           operator: In
                           values:
-                          - traefik-ingress-lb
+                          - traefik-ingress
                       namespaces:
                       - kube-system
                       topologyKey: kubernetes.io/hostname
@@ -252,60 +252,58 @@ spec:
               key: node.kubernetes.io/network-unavailable
               operator: Exists
               tolerationSeconds: 5
-            serviceAccountName: traefik-ingress-controller
+            serviceAccountName: traefik-ingress
             containers:
             - image: traefik:v2.4
-              name: traefik-ingress-lb
+              name: traefik-ingress
               imagePullPolicy: IfNotPresent
               resources:
                   requests:
-                    cpu: 300m
-                    memory: 200Mi
+                    cpu: 500m
+                    memory: 500Mi
               ports:
               - name: web
                 containerPort: 80
+              - name: websecure
+                containerPort: 443
               - name: dns
                 containerPort: 53
                 protocol: UDP
               - name: admin
                 containerPort: 8080
               args:
-              - --providers.kubernetescrd
-              # 定义一个端点，名字叫web，端口号是80，定义IngressRoute的时候需要；
-              - --entrypoints.web.address=:80
-              # 定义DNS的端口号，方便后续将集群内的DNS服务暴漏出去
-              - --entrypoints.dns.address=:53/udp
-              # 开启API，后边ingressRoute使用
-              - --api=true
-              # 启用dashboard
-              - --api.dashboard=true
-              ## 访问日志配置
-              # 开启访问日志
-              - --accesslog=true
-              # 日志格式json
-              - --accesslog.format="json"
-              # 指定日志文件
-              - --accesslog.filepath="/path/to/access.log"
-              # 缓冲日志行，满100行输出到文件一次
-              - --accesslog.bufferingsize=100
-              ## traefik本身的日志
-              # 日志级别:DEBUG, PANIC, FATAL, ERROR, WARN, and INFO
-              - --log.level=INFO
+              - --configfile=/traefik/traefik.yaml
+              volumeMounts:
+                - mountPath: "/traefik"
+                  name: config
+            volumes:
+              - name: config
+                configMap:
+                  name: traefik-config
+                  items:
+                    - key: traefik.yaml
+                      path: traefik.yaml
+
+
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
- name: traefik-web-ui
+ name: traefik
  namespace: kube-system
 spec:
  selector:
-   app: traefik-ingress-lb
+   app: traefik-ingress
  ports:
  - port: 80
    targetPort: web
    name: web
    nodePort: 80
+ - port: 443
+   targetPort: websecure
+   name: websecure
+   nodePort: 443
  - port: 53
    targetPort: dns
    name: dns
@@ -340,3 +338,23 @@ spec:
 #      kind: TraefikService
 #    middlewares:
 #      - name: autodetect
+#---
+## 配置自己的ingress-https
+#apiVersion: traefik.containo.us/v1alpha1
+#kind: IngressRoute
+#metadata:
+#  name: traefik-dashboard-https
+#  namespace: kube-system
+#spec:
+#  routes:
+#  - match: Host(`traefik.kube.com`)
+#    kind: Rule
+#    services:
+#    - name: api@internal
+#      kind: TraefikService
+#    middlewares:
+#      - name: autodetect
+#  tls:
+#    options:
+#      name: traefik-tls-options
+#      namespace: kube-system
