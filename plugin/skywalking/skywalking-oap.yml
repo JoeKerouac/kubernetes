@@ -99,8 +99,8 @@ spec:
                   app: "skywalking-oap"
       containers:
       - name: skywalking-oap
-        # 注意，如果要使用MySQL作为存储，那么需要自己添加MySQL的驱动
-        image: apache/skywalking-oap-server:8.6.0-es7
+        # 8.8.1版本默认支持es7，同时支持Java17
+        image: apache/skywalking-oap-server:8.8.1
         imagePullPolicy: IfNotPresent
         livenessProbe:
           tcpSocket:
@@ -142,7 +142,7 @@ spec:
         # storage配置，环境变量名可以参考文档：https://skywalking.apache.org/docs/main/v8.5.0/en/setup/backend/backend-storage/
         # 这里使用es7作为后端存储，这块儿比MySQL好使，es安装参考es的安装
         - name: SW_STORAGE
-          value: elasticsearch7
+          value: elasticsearch
         - name: SW_NAMESPACE
           value: ${SW_NAMESPACE}
         - name: SW_STORAGE_ES_INDEX_REPLICAS_NUMBER
@@ -247,7 +247,7 @@ spec:
     spec:
       containers:
       - name: skywalking-ui
-        image: apache/skywalking-ui:8.5.0
+        image: apache/skywalking-ui:8.8.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
