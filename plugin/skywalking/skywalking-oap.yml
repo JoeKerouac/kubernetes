@@ -143,8 +143,9 @@ spec:
         # 这里使用es7作为后端存储，这块儿比MySQL好使，es安装参考es的安装
         - name: SW_STORAGE
           value: elasticsearch
+        # 这个namespace是用作sky walking存储表的前缀，如果多个sky walking链接的存储是同一个的话，比如同一个ES，就可以根据这个来隔离不同环境的数据
         - name: SW_NAMESPACE
-          value: ${SW_NAMESPACE}
+          value: sw_${SW_NAMESPACE}
         - name: SW_STORAGE_ES_INDEX_REPLICAS_NUMBER
           value: ${SW_STORAGE_ES_INDEX_REPLICAS_NUMBER}
         - name: SW_ES_USER
