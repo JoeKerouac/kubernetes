@@ -262,7 +262,7 @@ spec:
             memory: 2Gi
         env:
         - name: SW_OAP_ADDRESS
-          value: skywalking-oap:12800
+          value: http://skywalking-oap:12800
 
 
 ---
