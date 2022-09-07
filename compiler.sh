@@ -81,6 +81,8 @@ CLUSTER_CIDR=193.0.0.0/8
 APISERVER_ETCD_PREFIX=/k8s/data
 # service ip范围，注意，子网掩码不能比12小
 VIP_RANGE=194.10.0.0/16
+# apiserver的service ip，用于生成证书的时候使用
+APISERVER_VIP=194.10.0.1
 # 集群DNS地址,注意，service IP必须符合集群定义，集群的第一个IP（194.10.0.1）肯定是apiserver占用了，所以这里用2
 CLUSTER_DNS_IP=194.10.0.2
 # 集群域名后缀，用于生成/etc/resolve.conf解析DNS用
@@ -291,6 +293,8 @@ ORGANIZATIONAL_UNIT=${ORGANIZATIONAL_UNIT}
 STATE=${STATE}
 # ETCD的服务地址，apiserver使用
 ETCD_SERVER=http://${APISERVER_IP}:${ETCD_PORT}
+# apiserver的service ip，生成证书时使用
+APISERVER_VIP=${APISERVER_VIP}
 EOF
 
 
@@ -313,8 +317,8 @@ TLS_PRIVATE_KEY=${BASE_DIR}/secure/tls.key
 
 
 
-# 生成一个证书
-createCert ${BASE_DIR}/secure/apiserver.ca.key ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_PRIVATE_KEY} ${TLS_CERT_FILE} ${BASE_DIR}/tmp
+# 生成apiserver的证书
+createCert ${BASE_DIR}/secure/apiserver.ca.key ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_PRIVATE_KEY} ${TLS_CERT_FILE} ${BASE_DIR}/tmp "IP.2 = ${APISERVER_VIP}"
 # 调用通用的创建配置方法，对于apiserver，ca要传kubelet的ca证书
 createCommonConfig ${KUBE_COMMON_CONFIG} ${BASE_DIR}/secure/kubelet.ca.crt ${TLS_CERT_FILE} ${TLS_PRIVATE_KEY}
 
@@ -476,7 +480,7 @@ TLS_PRIVATE_KEY=${BASE_DIR}/secure/tls.key
 
 echo "开始安装controller-manager"
 
-# 生成证书
+# 生成controller-manager的证书
 createCert ${BASE_DIR}/secure/apiserver.ca.key ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_PRIVATE_KEY} ${TLS_CERT_FILE} ${BASE_DIR}/tmp
 # 生成配置
 createCommonConfig ${KUBE_COMMON_CONFIG} ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_CERT_FILE} ${TLS_PRIVATE_KEY}
@@ -603,7 +607,7 @@ TLS_PRIVATE_KEY=${BASE_DIR}/secure/tls.key
 
 echo "开始安装kube-scheduler"
 
-# 生成证书
+# 生成kube-scheduler的证书
 createCert ${BASE_DIR}/secure/apiserver.ca.key ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_PRIVATE_KEY} ${TLS_CERT_FILE} ${BASE_DIR}/tmp
 # 生成配置
 createCommonConfig ${KUBE_COMMON_CONFIG} ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_CERT_FILE} ${TLS_PRIVATE_KEY}
@@ -733,7 +737,7 @@ TLS_PRIVATE_KEY=${BASE_DIR}/secure/tls.key
 
 echo "开始安装kubelet"
 
-# 生成证书
+# 生成kubelet的证书
 createCert ${BASE_DIR}/secure/apiserver.ca.key ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_PRIVATE_KEY} ${TLS_CERT_FILE} ${BASE_DIR}/tmp
 # 生成配置
 createCommonConfig ${KUBE_COMMON_CONFIG} ${BASE_DIR}/secure/apiserver.ca.crt ${TLS_CERT_FILE} ${TLS_PRIVATE_KEY}

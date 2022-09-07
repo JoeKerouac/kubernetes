@@ -79,6 +79,8 @@ TLS_PRIVATE_KEY=$3
 TLS_CERT_FILE=$4
 # 文件生成的位置，一些临时文件会生成到临时目录中
 GENERATE_CERT_DIR=$5
+# apiserver专用，例如IP.1 = 194.10.0.1
+ALT_NAME=$6
 mkdirIfAbsent ${GENERATE_CERT_DIR}
 
 # CA证书的密码
@@ -127,6 +129,7 @@ DNS.3 = kubernetes.default.svc
 DNS.4 = kubernetes.default.svc.cluster
 DNS.5 = kubernetes.default.svc.cluster.local
 IP.1 = ${LOCAL_IP}
+${ALT_NAME}
 
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always
