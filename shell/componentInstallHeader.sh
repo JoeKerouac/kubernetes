@@ -80,7 +80,7 @@ TLS_CERT_FILE=$4
 # 文件生成的位置，一些临时文件会生成到临时目录中
 GENERATE_CERT_DIR=$5
 # apiserver专用，例如IP.1 = 194.10.0.1
-ALT_NAME=$6
+ALT_NAME=${6:-}
 mkdirIfAbsent ${GENERATE_CERT_DIR}
 
 # CA证书的密码
