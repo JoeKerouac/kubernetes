@@ -1028,19 +1028,19 @@ cat << EOF >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 
 
 # K8S的service ip的范围，例如194.10.0.0/16
-sed -i "s#\${VIP_CIDR}#${VIP_RANGE}#g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\\\${VIP_CIDR}#${VIP_RANGE}#g" ${NOW_DIR}/core-dns.yml
 # pod的ip范围，例如193.0.0.0/8
-sed -i "s#\${POD_CIDR}#${CLUSTER_CIDR}#g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\\\${POD_CIDR}#${CLUSTER_CIDR}#g" ${NOW_DIR}/core-dns.yml
 # K8S集群的域名后缀，注意，这个域名只会使用K8S解析，不会转发到其他地方；
-sed -i "s/\${CLUSTER_DOMAIN}/${CLUSTER_DOMAIN}/g" ${NOW_DIR}/core-dns.yml
+sed -i "s/\\\${CLUSTER_DOMAIN}/${CLUSTER_DOMAIN}/g" ${NOW_DIR}/core-dns.yml
 # 响应给dns查询客户端的ttl
-sed -i "s/\${DNS_TTL}/30/g" ${NOW_DIR}/core-dns.yml
+sed -i "s/\\\${DNS_TTL}/30/g" ${NOW_DIR}/core-dns.yml
 # Prometheus的端口号
-sed -i "s/\${PROMETHEUS_PORT}/9153/g" ${NOW_DIR}/core-dns.yml
+sed -i "s/\\\${PROMETHEUS_PORT}/9153/g" ${NOW_DIR}/core-dns.yml
 # 域名服务器（也可以是文件，例如/etc/resolv.conf），对于coredns无法解析的域名转发到该服务器解析；
-sed -i "s#\${UPSTREAMNAMESERVER}#${UPSTREAMNAMESERVER}#g" ${NOW_DIR}/core-dns.yml
+sed -i "s#\\\${UPSTREAMNAMESERVER}#${UPSTREAMNAMESERVER}#g" ${NOW_DIR}/core-dns.yml
 # dns在集群中的service ip
-sed -i "s/\${CLUSTER_DNS_IP}/${CLUSTER_DNS_IP}/g" ${NOW_DIR}/core-dns.yml
+sed -i "s/\\\${CLUSTER_DNS_IP}/${CLUSTER_DNS_IP}/g" ${NOW_DIR}/core-dns.yml
 
 kubectl apply -f ${NOW_DIR}/core-dns.yml
 
