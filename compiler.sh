@@ -13,6 +13,7 @@ set -e
 CA_CERT_PASSWORD=$1
 UPSTREAMNAMESERVER=$2
 APISERVER_IP=$3
+ETCD_PORT=$4
 
 
 # 如果指定目录不存在则创建
@@ -288,12 +289,12 @@ ADMIN_USER_GROUP=${ADMIN_USER_GROUP}
 ORGANIZATIONAL_UNIT=${ORGANIZATIONAL_UNIT}
 # 公司所属城市
 STATE=${STATE}
+# ETCD的服务地址，apiserver使用
+ETCD_SERVER=http://${APISERVER_IP}:${ETCD_PORT}
 EOF
 
 
 cat << 'OUTER' >> ${APISERVER_INSTALLER_DIR}/install.sh
-# ETCD的服务地址，例如http://192.168.1.1:2379  注意，请尽量使用域名
-ETCD_SERVER=$4
 echo "开始安装apiserver"
 # service的env文件位置，后边脚本会自动生成该文件，生成Linux的service时需要引用该文件
 APISERVER_ENV=${BASE_DIR}/config/apiserver.service.env

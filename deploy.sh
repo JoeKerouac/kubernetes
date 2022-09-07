@@ -145,7 +145,7 @@ execSSHWithoutPasswd "ssh -p ${1} ${2}@${3} \"${5}\"" ${4}
 ##
 ###################################################################################################################
 
-sh compiler.sh ${CA_CERT_PASSWORD} ${UPSTREAMNAMESERVER} ${MASTER_IP}
+sh compiler.sh ${CA_CERT_PASSWORD} ${UPSTREAMNAMESERVER} ${MASTER_IP} ${ETCDPORT}
 
 
 ###################################################################################################################
