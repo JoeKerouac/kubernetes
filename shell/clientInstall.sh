@@ -293,8 +293,9 @@ echo "K8S服务安装完毕，开始启动服务"
 
 # 先重新加载下
 systemctl daemon-reload
-systemctl restart flanneld
-systemctl enable flanneld
+echo "启动服务：flannel"
+systemctl restart flanneld || echo "服务flannel启动疑似失败，请检查"
+systemctl enable flanneld || echo "服务flannel设置开机自启失败，请手动设置"
 for SERVICE in docker kube-proxy kubelet
 do
     echo "启动服务：${SERVICE}"
