@@ -973,6 +973,16 @@ OUTER
 # 创建目录
 mkdirIfAbsent ${PLUGIN_INSTALLER_DIR}
 
+
+# 生成traefik使用的证书
+openssl genrsa -out ${K8S_SECURE_TEMP_DIR}/traefik.key 2048 >/dev/null 2>&1
+openssl req -new -key ${K8S_SECURE_TEMP_DIR}/traefik.key -subj "/CN=*.${CLUSTER_DOMAIN}/O=JoeKerouac" -out ${K8S_SECURE_TEMP_DIR}/traefik.csr >/dev/null 2>&1
+openssl x509 -req -in ${K8S_SECURE_TEMP_DIR}/traefik.csr -CA ${K8S_SECURE_TEMP_DIR}/ca.crt -CAkey ${K8S_SECURE_TEMP_DIR}/ca.key -passin pass:${CA_CERT_PASSWORD} -CAcreateserial -out ${K8S_SECURE_TEMP_DIR}/traefik.crt -days ${CA_CRT_EXPIRE} -extensions v3_ext >/dev/null  2>&1
+cp ${K8S_SECURE_TEMP_DIR}/traefik.crt ${PLUGIN_INSTALLER_DIR}/traefik.crt
+cp ${K8S_SECURE_TEMP_DIR}/traefik.key ${PLUGIN_INSTALLER_DIR}/traefik.key
+echo "使用ca证书签名的traefik证书生成完毕"
+
+
 cp ${NOW_DIR}/template/core-dns.yml ${PLUGIN_INSTALLER_DIR}
 cp ${NOW_DIR}/template/ingress-traefik.yml ${PLUGIN_INSTALLER_DIR}
 cp ${NOW_DIR}/template/dashboard.yml ${PLUGIN_INSTALLER_DIR}
@@ -1025,6 +1035,7 @@ cat << EOF >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 ##
 ###################################################################################################################
 
+kubectl -n kube-system create secret tls traefik-tls --cert=${NOW_DIR}/traefik.cert --key=${NOW_DIR}/traefik.key
 kubectl apply -f ${NOW_DIR}/ingress-traefik.yml
 
 ###################################################################################################################
