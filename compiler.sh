@@ -975,8 +975,7 @@ mkdirIfAbsent ${PLUGIN_INSTALLER_DIR}
 
 cp ${NOW_DIR}/template/core-dns.yml ${PLUGIN_INSTALLER_DIR}
 cp ${NOW_DIR}/template/ingress-traefik.yml ${PLUGIN_INSTALLER_DIR}
-cp ${NOW_DIR}/template/metrics-server.yml ${PLUGIN_INSTALLER_DIR}
-cp ${NOW_DIR}/template/kuboard.yml ${PLUGIN_INSTALLER_DIR}
+cp ${NOW_DIR}/template/dashboard.yml ${PLUGIN_INSTALLER_DIR}
 
 
 cat << 'EOF' > ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
@@ -1012,8 +1011,8 @@ NOW_DIR=`dirname "$PRG"`
 
 # etcd地址，例如192.168.1.6:2379
 ETCD_SERVER=$1
-# kuboard的域名，例如kuboard.kube.com（用于配置ingress规则）
-KUBOARD_HOST=$2
+# kuboard的域名
+DASHBOARD_HOST=$2
 
 EOF
 
@@ -1022,7 +1021,15 @@ cat << EOF >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 
 ###################################################################################################################
 ##
-## core-dns 安装
+## ingress-traefik 安装
+##
+###################################################################################################################
+
+kubectl apply -f ${NOW_DIR}/ingress-traefik.yml
+
+###################################################################################################################
+##
+## core-dns 安装，依赖 traefik-server
 ##
 ###################################################################################################################
 
@@ -1045,36 +1052,17 @@ sed -i "s/\\\${CLUSTER_DNS_IP}/${CLUSTER_DNS_IP}/g" ${NOW_DIR}/core-dns.yml
 kubectl apply -f ${NOW_DIR}/core-dns.yml
 
 
-
-###################################################################################################################
-##
-## ingress-traefik 安装
-##
-###################################################################################################################
-
-kubectl apply -f ${NOW_DIR}/ingress-traefik.yml
-
-###################################################################################################################
-##
-## metrics-server 安装
-##
-###################################################################################################################
-
-kubectl apply -f ${NOW_DIR}/metrics-server.yml
-
-
 EOF
 
 cat << 'EOF' >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 ###################################################################################################################
 ##
-## kuboard 安装，依赖 traefik-server
+## dashboard 安装，依赖 traefik-server
 ##
 ###################################################################################################################
 
-sed -i "s/\${etcdAddr}/${ETCD_SERVER}/g" ${NOW_DIR}/kuboard.yml
-sed -i "s/\${kuboardHost}/${KUBOARD_HOST}/g" ${NOW_DIR}/kuboard.yml
+sed -i "s/\${dashboardHost}/${DASHBOARD_HOST}/g" ${NOW_DIR}/dashboard.yml
 
-kubectl apply -f ${NOW_DIR}/kuboard.yml
+kubectl apply -f ${NOW_DIR}/dashboard.yml
 
 EOF

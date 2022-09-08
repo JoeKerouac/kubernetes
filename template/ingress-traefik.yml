@@ -4,6 +4,108 @@
 ##
 ###################################################################################################################
 
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik-tls
+  namespace: kube-system
+type: Opaque
+data:
+  # 注意将这个替换为自己的tls crt
+  # 注意，这个是pem证书文件的base64形式
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQvRENDQXVTZ0F3SUJBZ0lKQUxlVWFuUG1NaVBCTUEwR0NTcUdTSWIzRFFFQkN3VUFNQzh4TFRBckJnTlYKQkFvTUpNT2x3b3pDbDhPa3dyckNyTU9ud283Q3I4T253cERDZzhPa3dyekNtTU9vd3JmQ3J6QWdGdzB5TWpBMQpNVFl3TVRNNU5EbGFHQTh5TVRJeU1EUXlNakF4TXprME9Wb3dnWVV4Q3pBSkJnTlZCQVlUQWtOT01ROHdEUVlEClZRUUlEQWJtc3JQbGpaY3hEekFOQmdOVkJBY01CdWF5cytXTmx6RWhNQjhHQTFVRUNnd1k1ckt6NVkyWDU0NnYKNTVDRDVMeVk2TGV2NXBXWjZJS3lNUkl3RUFZRFZRUUxEQW5tbnJibW5vVG51NFF4SFRBYkJnTlZCQU1NRkNvdQpiWFYwZFdGc0xtNXBZMlZzYjI4dVkyOXRNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDCkFRRUFzWDc1OHFKTERxTktONVJLU1d3eWpaY21Pa3Y2amxLODdIN0VpR1dVOXU3eXJIc3RIcUw3MUxxaVZnQ1QKOHkyNllrb0NUS2V3Mk1FUm9pRnZiUFAvVkwwS0JRUDdmQVdBbzQxQ01VUitRelhFK2E5QjY5MjZYQnZ4aWlrcwpjclM3cHBjd0VmYmpKRGxVS1JFbDRrODBvTkJ3NjZBOTQvc2Z1eGNxb0wzb0lmUlZuaEdGcHA4Uy9XMjNlMzFlCmFUYk55NUUzTEQ1cWRBWlJwb2xHUkFwT1pya3FUaDU4ZXJ1ciszK0pSYXlsaHBTdUtEZTI5dkpKc3BSc0YvSmYKTlNqZ0xUdTVXanRJek05dndQeTBXRjNvU3Ixek9oYlYrMVVxQUxVRmxmN1N4ZEhVSktjWHBldW5BTmFQR2VMTQptOEMwMmYyL1JhNDJPakhESjB5MGs3bERtd0lEQVFBQm80SEJNSUcrTUY4R0ExVWRJd1JZTUZhQUZJS1JzSkpmCmpNQjVEVXl0cml1WlJzc1ZvRmVSb1RPa01UQXZNUzB3S3dZRFZRUUtEQ1REcGNLTXdwZkRwTUs2d3F6RHA4S08Kd3EvRHA4S1F3b1BEcE1LOHdwakRxTUszd3ErQ0NRQ1dLR1pWWVludGlqQUpCZ05WSFJNRUFqQUFNQXNHQTFVZApEd1FFQXdJRXNEQWRCZ05WSFNVRUZqQVVCZ2dyQmdFRkJRY0RBUVlJS3dZQkJRVUhBd0l3SkFZRFZSMFJCQjB3Ckc0SUtLaTVyZFdKbExtTnZiWUlOS2k1dWFXTmxiRzl2TG1OdmJUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUEKMnVEQUJQNU95U2FFVnRRVmkwSEpocUVKclFzVE8xWmIxRjVoV295enJ0ZURBT01WTVJsc3krYUZ6T1JxQjU2MAp3Rkl2WUw2dEZTMDJQdkYvKzAwR0kzVXVzVG9mUmhMRis1UFAxd0JtWmJJVDZ3bGU4ZlU4TTZtL29jZUMvVStmCjdkdERSTmJyK3ArS2wzVEpGclJmbmR2djBkWGhHUC85aGR0blg4RCtJWWdRYnRPdWk4MFFlZ0ljRzF1VkRHbXYKS0RyMEtVNzlFL2swSE1wSThZZENBclV4TkRSY1MzV2xBWUdXTmZKdndYRXNSSlFuWE0vaTMrd1lVNWwxSFJxUQpzZVd3eFpSeWFTbG9jeXB1Ui9JdHZ2T2xqcmZUMVc0bXJzYkxYVlFGcXNwdFFqaVFsdndhVGpKbVh5amc1blMyCnliU2p0eUFYTUoya0J1RzRMd1c1OEE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  # 注意将这个替换为自己的tls key
+  # 注意，这个是pem证书文件的base64形式
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBc1g3NThxSkxEcU5LTjVSS1NXd3lqWmNtT2t2NmpsSzg3SDdFaUdXVTl1N3lySHN0CkhxTDcxTHFpVmdDVDh5MjZZa29DVEtldzJNRVJvaUZ2YlBQL1ZMMEtCUVA3ZkFXQW80MUNNVVIrUXpYRSthOUIKNjkyNlhCdnhpaWtzY3JTN3BwY3dFZmJqSkRsVUtSRWw0azgwb05CdzY2QTk0L3NmdXhjcW9MM29JZlJWbmhHRgpwcDhTL1cyM2UzMWVhVGJOeTVFM0xENXFkQVpScG9sR1JBcE9acmtxVGg1OGVydXIrMytKUmF5bGhwU3VLRGUyCjl2SkpzcFJzRi9KZk5TamdMVHU1V2p0SXpNOXZ3UHkwV0Yzb1NyMXpPaGJWKzFVcUFMVUZsZjdTeGRIVUpLY1gKcGV1bkFOYVBHZUxNbThDMDJmMi9SYTQyT2pIREoweTBrN2xEbXdJREFRQUJBb0lCQURYSm1NemlTWVNDRHplUQpoSUtEZXo1VkU0eVBBYnFuY0FEcTJYdkw3THgzNUtwSUdZQXpPOFZYV1dKZWduY3E0RlJ3d1FtaHQ0RzM0RFFWCmxjS2Fua0Y3bDlHMVJ6eHFIblZ4bFNHQTlCSkI5Uk1FL1NFUTdDeUZlMGkyK1hVNU43UmdGSDBkSi9BT1AyYkMKZjR4NUhDV3ZoTWlpb3A2M3R3SG5IMC9ldkwyczRDTWhMaloyRVhhWVcwVzBIZDFGbkQveWdTSVpsTHlkUlRzVAoxUkw0RjlOdWlxUk9LMHF0V2djS21wK2k2R2VMd0VuWGhYbGlaZFZHUjczTnYyamhUcmxNZEFHbWxtVlIzODVkCjEvSGw5S0gxOS9ZNzJSdzZaN2dJQ0xrWEZ0YWRQTXgxck0zdXg5RDF0akpUZTk0TWlualhyaU1lTk10elZwK3AKZ3U1RjAwRUNnWUVBMWdwdmpVQTJFUEd3bW5DcU9LWGhzUitCVkJqcGg2cEk2S2M4RlRHdXc2UDB1b3AxNVR3bwpoaUlPUzBxZEpPRTlHVlR2NzRBUDNpbTZJeTRhRi9EVkpYdlhUcDlmL1VKcXIrLzZUZnpNc3VoaWQxMXIzZkNUCkNYZ0h3N1ZQZkhuR1pQNitaei9WNzZvaDFPZDBYZnFvT0hzV0gyTFhYaDU1REZJRnYrbFdUOE1DZ1lFQTFFcU4KeXUyTU9aNjNLTzBpTWl2YWJjOFdoa0lQOXNQd2JvS0NxSTNIaHJHUktJV2V6S2FRbkw1cWtiMERWV2Y3akJkSwpyT1lhWDY0RzBnTkw5eWl1WU9STElwN2dqYjc3Y29ZRXZlbFYxRXZLTFF4cWJFK1pNRHFEZTdic1NIVHVkdWx5Cm1TWmNZamNISWUvbGFBK3dSa1AyVlNOam0wdnQ1ZmtCMUtZbUYwa0NnWUFsY04zaWo0RGxwZUdHb242a09pQW8KbzZJejI4ZTkrNE9WYnV1THFZMHdtOVdMYS8wRGhHcHlURExENk9Ga09pSTk5Q1drZDNwUEdtMTlDZXQybEtJMApWRjF0VzJPbklaOFg5NXFKV2RkVTFHR2xENnAyd0VaNE9ZN2lKUzBxVVFMclY4Um11enZwR0pHaWRIcGVsaUltCi95RDNqSXF2NUJTNG13QjJlWktua1FLQmdRREhub2N3THlqeE1YNDNQS3d3RXk1a25Sc29DY3lyRkZuc0FFck8KSmV0ZGkzRGNjckQ4N1E4RVpNVWUzMlhZRkZ2andpOFUzNVlqTENmN3FOL3d1ODhsQ3VaZjJwZDZrZ0F0RXpvNApQY1hZUjZBSHRpb0lTTnphRGR0L0pHV1FTR3ZIWXdMQVllTHk4NTJBV3UwVGFkVXViVStmaFJSdmZmbG9pem9lCmRGRlRDUUtCZ0NlNWdvblpsbGZZZXR1aXR3L29UeTZjaEhyYTdlWUl3V0xOZ2R3elgrUDVpRkNLUkxLTmIxamYKRktNWlhscVhoeUtsem9nUCtCenJLa2JNQWsvL1JSRlNFekVyVWt5TEs2UzNEVDhYSTQ2a3B3N1JZNkhtQzFLdApJN1JDSnBrRTNOTHBiYllhNVpMQUtYQkRhcjc5UC93dlFDTFd4QzFjb0ZzTmtJR0FWejF5Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+
+---
+
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: traefik-config
+  namespace: kube-system
+data:
+  traefik.yaml: |-
+    serversTransport:
+      insecureSkipVerify: true
+    api:
+      insecure: true
+      dashboard: true
+    metrics:
+      prometheus: ""
+    entryPoints:
+      # dns端口
+      dns:
+        address: ":53/udp"
+      # 应用http端口
+      web:
+        address: ":80"
+        # 设置forwardedHeaders为insecure，始终信任请求投中的X-Forwarded-*，也就是无论哪个ip过来的请求，我们都信任其携带的X-Forwarded-*请求头，将其转发到后端
+        forwardedHeaders: 
+          insecure: true
+        transport:
+          # 设置优雅退出时间
+          lifeCycle:
+            requestAcceptGraceTimeout: 10s
+            graceTimeOut: 10s
+          respondingTimeouts:
+            # 读取请求的超时时间，0表示不会超时
+            readTimeout: 10s
+            # 响应超时时间，从接受完请求到完全写出响应之间的时间，0表示不会超时
+            writeTimeout: 300s
+            # keep-alive最长时间，如果超过该时间仍然没有数据那么连接将会中断
+            idleTimeout: 300s
+      # 应用https端口
+      websecure:
+        address: ":443"
+        # 设置forwardedHeaders为insecure，始终信任请求投中的X-Forwarded-*，也就是无论哪个ip过来的请求，我们都信任其携带的X-Forwarded-*请求头，将其转发到后端
+        forwardedHeaders: 
+          insecure: true
+        transport:
+          # 设置优雅退出时间
+          lifeCycle:
+            requestAcceptGraceTimeout: 10s
+            graceTimeOut: 10s
+          respondingTimeouts:
+            # 读取请求的超时时间，0表示不会超时
+            readTimeout: 10s
+            # 响应超时时间，从接受完请求到完全写出响应之间的时间，0表示不会超时
+            writeTimeout: 300s
+            # keep-alive最长时间，如果超过该时间仍然没有数据那么连接将会中断
+            idleTimeout: 300s
+    tls:
+      # tls选项
+      options:
+        default:
+          minVersion: VersionTLS12
+          maxVersion: VersionTLS13
+          cipherSuites:
+            - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+            - TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256
+            - TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384
+    # 服务发现，使用kubernetes
+    providers:
+      kubernetesCRD: ""
+      kubernetesingress: ""
+    # traefik本身的日志配置，日志级别:DEBUG, PANIC, FATAL, ERROR, WARN, and INFO
+    log:
+      level: warn
+      format: json
+    # 访问日志配置
+    accessLog:
+      filePath: "/traefik/log/access.log"
+      format: json
+      # 内存中保存的日志行数buffer，当内存中日志行数超过该buffer值才会写出到磁盘
+      bufferingSize: 100
+---
+
 # traefik部署先决条件，先部署以下内容
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -197,6 +299,39 @@ kind: ServiceAccount
 metadata:
   namespace: kube-system
   name: traefik-ingress
+
+
+---
+# tls选项
+apiVersion: traefik.containo.us/v1alpha1
+kind: TLSOption
+metadata:
+  name: traefik-tls-options
+  namespace: kube-system
+spec:
+  minVersion: VersionTLS12
+  cipherSuites:
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384
+
+---
+# 存储分组
+apiVersion: traefik.containo.us/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+
+spec:
+  # 指定默认证书，k8s中traefik只能通过这个指定证书
+  defaultCertificate:
+    secretName: traefik-tls
 
 ---
 

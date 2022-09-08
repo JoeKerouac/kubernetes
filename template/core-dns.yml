@@ -247,6 +247,7 @@ spec:
     protocol: TCP
 
 ---
+# dns的traefik
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRouteUDP
 metadata:
@@ -259,4 +260,5 @@ spec:
     - services:
         - name: kube-dns
           port: 53
+
 
