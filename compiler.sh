@@ -1073,6 +1073,7 @@ cat << 'EOF' >> ${PLUGIN_INSTALLER_DIR}/install-plugins.sh
 ###################################################################################################################
 
 sed -i "s/\${dashboardHost}/${DASHBOARD_HOST}/g" ${NOW_DIR}/dashboard.yml
+sed -i "s/\${etcdAddr}/${ETCD_SERVER}/g" ${NOW_DIR}/dashboard.yml
 
 kubectl apply -f ${NOW_DIR}/dashboard.yml
 
